@@ -13,6 +13,7 @@ import org.springframework.boot.security.autoconfigure.actuate.web.servlet.Endpo
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -64,7 +65,7 @@ class SecurityConfiguration {
             requestMatcherBuilder.matcher("/favicon.ico"),
             requestMatcherBuilder.matcher("/robots.txt"),
             requestMatcherBuilder.matcher("/assets/**"),
-            requestMatcherBuilder.matcher("/login/token"),
+            PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, "/login/token"),
             requestMatcherBuilder.matcher("/login/oauth/access_token"),
             requestMatcherBuilder.matcher("/api/v3/app-manifests/{code}/conversions"),
             requestMatcherBuilder.matcher("/api/v3/rate_limit"),
@@ -84,13 +85,13 @@ class SecurityConfiguration {
     Builder requestMatcherBuilder = PathPatternRequestMatcher.withDefaults();
 
     return http
-        .securityMatcher(
-            "/login/oauth/authorize",
-            "/settings/apps/new",
-            "/jira-gitea-connector/installations/new",
-            "/installations/{installation-id}/organizations/select"
-
-        )
+        .securityMatcher(new OrRequestMatcher(
+            PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login/token"),
+            requestMatcherBuilder.matcher("/login/oauth/authorize"),
+            requestMatcherBuilder.matcher("/settings/apps/new"),
+            requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
+            requestMatcherBuilder.matcher("/installations/{installation-id}/organizations/select")
+        ))
         .authorizeHttpRequests(authorize -> authorize
             .anyRequest()
             .authenticated()
