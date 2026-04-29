@@ -9,6 +9,7 @@ import hu.alphabox.jgc.github.graphql.mapper.RepositoryMapper;
 import hu.alphabox.jgc.github.graphql.schema.DeploymentConnection;
 import hu.alphabox.jgc.github.graphql.schema.DeploymentOrder;
 import hu.alphabox.jgc.github.graphql.schema.PageInfo;
+import hu.alphabox.jgc.github.graphql.schema.Ref;
 import hu.alphabox.jgc.github.graphql.schema.RefConnection;
 import hu.alphabox.jgc.github.graphql.schema.Repository;
 import java.util.Collections;
@@ -67,6 +68,10 @@ class RepositoryController {
     int pageSize = Objects.requireNonNullElse(first, 10);
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
 
+    if ("heads".equals(refType)) {
+      return defaultBranchRefConnection(repository, page);
+    }
+
     try {
       ResponseEntity<List<Reference>> response = giteaClient.repoListGitRefs(
           repository.owner().login(),
@@ -108,6 +113,37 @@ class RepositoryController {
     } catch (HttpClientErrorException.NotFound _) {
       return null;
     }
+  }
+
+  private RefConnection defaultBranchRefConnection(Repository repository, int page) {
+    if (page > 1 || repository.defaultBranchRef() == null) {
+      return new RefConnection(
+          Collections.emptyList(),
+          Collections.emptyList(),
+          new PageInfo(
+              String.valueOf(page),
+              null,
+              false,
+              page > 1
+          ),
+          repository.defaultBranchRef() == null ? 0 : 1
+      );
+    }
+
+    Ref defaultBranchRef = repository.defaultBranchRef();
+    defaultBranchRef.setRepository(repository);
+
+    return new RefConnection(
+        List.of(referenceMapper.edge(defaultBranchRef, null)),
+        List.of(defaultBranchRef),
+        new PageInfo(
+            "1",
+            null,
+            false,
+            false
+        ),
+        1
+    );
   }
 
   @SchemaMapping(typeName = "Repository", field = "deployments")
