@@ -15,7 +15,13 @@ class LoggingInterceptor implements WebGraphQlInterceptor {
 
   @Override
   public Mono<WebGraphQlResponse> intercept(WebGraphQlRequest request, Chain chain) {
-    log.debug(request.toString());
+    log.info(
+        "GraphQL request received. operationName={}, id={}, document={} variables={}",
+        request.getOperationName(),
+        request.getId(),
+        request.getDocument(),
+        request.getVariables()
+    );
 
     return chain.next(request).doOnNext(response -> {
       if (response.isValid()) {
