@@ -13,6 +13,7 @@ import hu.alphabox.jgc.github.graphql.schema.RefConnection;
 import hu.alphabox.jgc.github.graphql.schema.Repository;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -62,21 +63,9 @@ class RepositoryController {
       return null;
     }
 
-    if (after != null && after.equalsIgnoreCase("2")) {
-      return new RefConnection(
-          Collections.emptyList(),
-          Collections.emptyList(),
-          new PageInfo(
-              "1",
-              null,
-              false,
-              true
-          ),
-          0
-      );
-    }
-
     String refType = refPrefix.substring(refPrefix.indexOf('/') + 1);
+    int pageSize = Objects.requireNonNullElse(first, 10);
+    int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
 
     try {
       ResponseEntity<List<Reference>> response = giteaClient.repoListGitRefs(
@@ -85,12 +74,37 @@ class RepositoryController {
           refType
       );
       List<Reference> references = response.getBody();
+      if (references == null) {
+        references = Collections.emptyList();
+      }
+
+      int fromIndex = Math.max(0, (page - 1) * pageSize);
+      if (fromIndex >= references.size()) {
+        return new RefConnection(
+            Collections.emptyList(),
+            Collections.emptyList(),
+            new PageInfo(
+                String.valueOf(page),
+                null,
+                false,
+                page > 1
+            ),
+            references.size()
+        );
+      }
+
+      int toIndex = Math.min(references.size(), fromIndex + pageSize);
+      String nextCursor = toIndex < references.size() ? String.valueOf(page + 1) : null;
+      List<Reference> pagedReferences = references.subList(fromIndex, toIndex);
+
       log.info(
-          "Fetching repository references for: {}\nRefs: {}",
+          "Fetching repository references for: {}\nCurrent page: {}, Page size: {}, Total refs: {}",
           "%s/%s".formatted(repository.owner().login(), repository.name()),
-          references
+          page,
+          pageSize,
+          references.size()
       );
-      return referenceMapper.map(references, repository);
+      return referenceMapper.map(pagedReferences, repository, pageSize, nextCursor);
     } catch (HttpClientErrorException.NotFound _) {
       return null;
     }

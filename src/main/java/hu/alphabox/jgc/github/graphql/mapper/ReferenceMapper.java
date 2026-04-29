@@ -23,16 +23,17 @@ import org.mapstruct.Named;
 )
 public interface ReferenceMapper {
 
-  default RefConnection map(List<Reference> references, Repository repository) {
+  default RefConnection map(List<Reference> references, Repository repository, int first, String nextCursor) {
     List<Ref> nodes = nodes(references, repository);
+    boolean hasNextPage = nextCursor != null;
 
     return new RefConnection(
-        nodes.stream().map(node -> edge(node, "2")).toList(),
+        nodes.stream().map(node -> edge(node, nextCursor)).toList(),
         nodes,
         new PageInfo(
             "1",
-            "2",
-            false,
+            nextCursor,
+            hasNextPage,
             false
         ),
         references.size()
