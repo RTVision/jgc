@@ -1,6 +1,7 @@
 package hu.alphabox.jgc.gitea;
 
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -8,7 +9,14 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record GiteaConfigurationProperties(
     @NotBlank
-    String baseUrl
+    String baseUrl,
+    List<String> allowedRepositories
 ) {
+
+  public GiteaConfigurationProperties {
+    if (allowedRepositories == null) {
+      allowedRepositories = List.of();
+    }
+  }
 
 }

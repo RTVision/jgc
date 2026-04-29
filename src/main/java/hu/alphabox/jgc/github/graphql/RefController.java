@@ -1,6 +1,7 @@
 package hu.alphabox.jgc.github.graphql;
 
 import hu.alphabox.jgc.config.LogTopic;
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.github.graphql.mapper.CommitMapper;
 import hu.alphabox.jgc.github.graphql.schema.Commit;
@@ -23,6 +24,7 @@ class RefController {
 
   private final GiteaClient giteaClient;
   private final CommitMapper commitMapper;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @SchemaMapping(typeName = "Ref", field = "associatedPullRequests")
   PullRequestConnection associatedPullRequests(
@@ -36,6 +38,10 @@ class RefController {
 
   @SchemaMapping(typeName = "Ref", field = "target")
   GitObject target(Ref ref) {
+    if (!allowedRepositoryService.isAllowed(ref.getRepository().owner().login(), ref.getRepository().name())) {
+      return null;
+    }
+
     if (ref.getTarget() != null) {
       return ref.getTarget();
     }

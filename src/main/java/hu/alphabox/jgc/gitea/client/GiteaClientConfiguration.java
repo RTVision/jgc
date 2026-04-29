@@ -2,6 +2,7 @@ package hu.alphabox.jgc.gitea.client;
 
 import hu.alphabox.jgc.gitea.GiteaConfigurationProperties;
 import java.io.IOException;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -33,6 +34,7 @@ class GiteaClientConfiguration {
     RestClient restClient = restClientBuilder
         .baseUrl(properties.baseUrl())
         .requestInterceptor(new GiteaTokenAuthenticationInterceptor(clientProperties.accessToken()))
+        .requestInterceptor(new GiteaRateLimitingInterceptor(clientProperties.requestDelay()))
         .build();
 
     RestClientAdapter adapter = RestClientAdapter.create(restClient);
@@ -58,6 +60,38 @@ class GiteaClientConfiguration {
           request.getHeaders(),
           new String(body)
       );
+      return execution.execute(request, body);
+    }
+  }
+
+  @Slf4j
+  @RequiredArgsConstructor
+  static class GiteaRateLimitingInterceptor implements ClientHttpRequestInterceptor {
+
+    private final Duration requestDelay;
+    private final Object lock = new Object();
+    private long nextAllowedRequestAtMillis;
+
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
+      long delayMillis = requestDelay.toMillis();
+      if (delayMillis > 0) {
+        synchronized (lock) {
+          long now = System.currentTimeMillis();
+          long sleepMillis = nextAllowedRequestAtMillis - now;
+          if (sleepMillis > 0) {
+            try {
+              Thread.sleep(sleepMillis);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new IOException("Interrupted while throttling Gitea requests", e);
+            }
+            now = System.currentTimeMillis();
+          }
+          nextAllowedRequestAtMillis = now + delayMillis;
+        }
+      }
+
       return execution.execute(request, body);
     }
   }

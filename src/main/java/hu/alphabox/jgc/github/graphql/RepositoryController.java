@@ -1,6 +1,7 @@
 package hu.alphabox.jgc.github.graphql;
 
 import hu.alphabox.jgc.config.LogTopic;
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Reference;
 import hu.alphabox.jgc.github.graphql.mapper.ReferenceMapper;
@@ -29,12 +30,17 @@ class RepositoryController {
   private final GiteaClient giteaClient;
   private final RepositoryMapper mapper;
   private final ReferenceMapper referenceMapper;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @QueryMapping
   Repository repository(
       @Argument String name,
       @Argument String owner
   ) {
+    if (!allowedRepositoryService.isAllowed(owner, name)) {
+      return null;
+    }
+
     try {
       ResponseEntity<hu.alphabox.jgc.gitea.client.model.Repository> response = giteaClient.repoGet(owner, name);
       log.info("Fetching repository data for: {}", "%s/%s".formatted(owner, name));
@@ -52,6 +58,10 @@ class RepositoryController {
       @Argument Integer first,
       @Argument String refPrefix
   ) {
+    if (!allowedRepositoryService.isAllowed(repository.owner().login(), repository.name())) {
+      return null;
+    }
+
     if (after != null && after.equalsIgnoreCase("2")) {
       return new RefConnection(
           Collections.emptyList(),

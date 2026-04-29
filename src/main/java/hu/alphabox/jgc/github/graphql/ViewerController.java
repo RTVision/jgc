@@ -2,14 +2,15 @@ package hu.alphabox.jgc.github.graphql;
 
 import hu.alphabox.jgc.config.LogTopic;
 import hu.alphabox.jgc.gitea.GiteaPageResponse;
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
+import hu.alphabox.jgc.gitea.client.model.Organization;
 import hu.alphabox.jgc.gitea.client.model.Repository;
-import hu.alphabox.jgc.gitea.client.model.SearchResults;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation.Installation;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationMissingException;
-import hu.alphabox.jgc.github.graphql.mapper.GiteaOrderMapper;
+import hu.alphabox.jgc.github.app.install.InstallationService;
 import hu.alphabox.jgc.github.graphql.mapper.RepositoryMapper;
 import hu.alphabox.jgc.github.graphql.schema.RepositoryAffiliation;
 import hu.alphabox.jgc.github.graphql.schema.RepositoryConnection;
@@ -33,6 +34,8 @@ class ViewerController {
   private final GitHubAppInstallationManager installationManager;
   private final RepositoryMapper repositoryMapper;
   private final GiteaClient giteaClient;
+  private final AllowedRepositoryService allowedRepositoryService;
+  private final InstallationService installationService;
 
   @QueryMapping
   User viewer() {
@@ -51,30 +54,18 @@ class ViewerController {
   ) {
     GitHubAppInstallation appInstallation = installationManager.getAppInstallation().orElseThrow(GitHubAppInstallationMissingException::new);
     Installation installation = appInstallation.getInstallation(Long.valueOf(authentication.getName())).orElseThrow(RuntimeException::new);
+    Organization organization = installationService.findOrganizationForUser(installation.getOrganizationId()).orElseThrow(RuntimeException::new);
 
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
-    GiteaPageResponse<Repository> response = GiteaPageResponse.of(
-        giteaClient.repoSearch(
-            null,
-            false,
-            true,
-            installation.getOrganizationId(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            //There’s no need for a general check, since the same user is always the one querying and having access to the repository.
-            ownerAffiliations.size() == 1 && ownerAffiliations.getFirst() == RepositoryAffiliation.OWNER,
-            orderBy == null ? null : GiteaOrderMapper.mapSort(orderBy.field()),
-            orderBy == null ? null : GiteaOrderMapper.mapDirection(orderBy.direction()),
-            page,
-            first
-        ),
-        SearchResults::data
+    List<Repository> repositories = filterRepositories(Objects.requireNonNull(giteaClient.orgListRepos(
+        organization.name(),
+        page,
+        first
+    ).getBody()));
+    GiteaPageResponse<Repository> response = new GiteaPageResponse<>(
+        repositories,
+        hu.alphabox.jgc.LinkHeaderProcessor.LinkManager.empty(),
+        repositories.size()
     );
 
     log.info(
@@ -85,5 +76,11 @@ class ViewerController {
     );
 
     return repositoryMapper.map(after, response);
+  }
+
+  private List<Repository> filterRepositories(List<Repository> repositories) {
+    return repositories.stream()
+        .filter(repository -> allowedRepositoryService.isAllowed(repository.fullName()))
+        .toList();
   }
 }

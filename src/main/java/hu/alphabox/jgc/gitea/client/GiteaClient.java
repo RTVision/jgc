@@ -338,6 +338,21 @@ public interface GiteaClient {
   );
 
   /**
+   * GET /orgs/{org}/repos : List an organization's repositories
+   *
+   * @param org   name of the organization (required)
+   * @param page  page number of results to return (1-based) (optional)
+   * @param limit page size of results (optional)
+   * @return RepositoryList (status code 200)
+   */
+  @GetExchange(value = "/orgs/{org}/repos")
+  ResponseEntity<List<Repository>> orgListRepos(
+      @PathVariable("org") String org,
+      @RequestParam(value = "page", required = false) @Nullable Integer page,
+      @RequestParam(value = "limit", required = false) @Nullable Integer limit
+  );
+
+  /**
    * POST /orgs/{org}/hooks : Create a hook
    *
    * @param org  name of the organization (required)

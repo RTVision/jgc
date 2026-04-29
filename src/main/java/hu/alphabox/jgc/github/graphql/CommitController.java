@@ -2,6 +2,7 @@ package hu.alphabox.jgc.github.graphql;
 
 import hu.alphabox.jgc.config.LogTopic;
 import hu.alphabox.jgc.gitea.GiteaPageResponse;
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.github.graphql.mapper.CommitMapper.CommitHistoryMapper;
 import hu.alphabox.jgc.github.graphql.mapper.GitActorMapper;
@@ -26,6 +27,7 @@ class CommitController {
   private final GiteaClient giteaClient;
   private final GitActorMapper actorMapper;
   private final CommitHistoryMapper historyMapper;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @SchemaMapping(typeName = "Commit", field = "history")
   CommitHistoryConnection handle(
@@ -34,6 +36,11 @@ class CommitController {
       @Argument Integer first,
       @Argument Instant since
   ) {
+    if (!allowedRepositoryService.isAllowed(commit.repository().owner().login(), commit.repository().name())) {
+      String cursor = Objects.requireNonNullElse(after, "1");
+      return historyMapper.map(cursor, GiteaPageResponse.empty(), commit.repository());
+    }
+
     int startCursor = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
     GiteaPageResponse<hu.alphabox.jgc.gitea.client.model.Commit> response = GiteaPageResponse.of(giteaClient.repoGetAllCommits(
         commit.repository().owner().login(),
@@ -62,6 +69,10 @@ class CommitController {
   GitActor author(
       Commit commit
   ) {
+    if (!allowedRepositoryService.isAllowed(commit.repository().owner().login(), commit.repository().name())) {
+      return null;
+    }
+
     if (commit.author() != null) {
       return commit.author();
     }

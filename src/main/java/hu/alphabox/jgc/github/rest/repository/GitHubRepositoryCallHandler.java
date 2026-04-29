@@ -1,5 +1,6 @@
 package hu.alphabox.jgc.github.rest.repository;
 
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.ContentsResponse;
 import hu.alphabox.jgc.gitea.client.model.Repository;
@@ -21,9 +22,14 @@ class GitHubRepositoryCallHandler {
 
   private final GiteaClient giteaClient;
   private final GitHubRepositoryMapper mapper;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @GetMapping
   ResponseEntity<GitHubRepositoryResponse> handle(@PathVariable String owner, @PathVariable String repo) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
     try {
       log.info("Querying for repository: {}/{}", owner, repo);
       ResponseEntity<Repository> repository = giteaClient.repoGet(owner, repo);
@@ -40,6 +46,10 @@ class GitHubRepositoryCallHandler {
       @PathVariable String owner,
       @PathVariable String repo
   ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
     String path = request.getRequestURI().split("/contents/", 2)[1];
     try {
       log.info("Querying for repository contents {} in: {}/{}", path, owner, repo);

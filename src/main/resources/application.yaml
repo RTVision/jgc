@@ -4,11 +4,15 @@ server:
 application:
   base-url:
   installation-path: installation.json
+  graph-ql:
+    timeout: 60s
   gitea:
     base-url:
+    allowed-repositories: []
     client:
       access-token:
       concurrency-limit: 12
+      request-delay: 0s
 
 spring:
   threads:

@@ -1,6 +1,6 @@
 package hu.alphabox.jgc.github.graphql;
 
-import java.time.Duration;
+import hu.alphabox.jgc.ApplicationProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.graphql.autoconfigure.ConditionalOnGraphQlSchema;
@@ -16,12 +16,12 @@ import org.springframework.graphql.server.TimeoutWebGraphQlInterceptor;
 @EnableConfigurationProperties(GraphQlProperties.class)
 class GraphQLConfiguration {
 
+  private final ApplicationProperties applicationProperties;
   private final GraphQlProperties graphQlProperties;
 
   @Bean
   TimeoutWebGraphQlInterceptor timeoutWebGraphQlInterceptor() {
-    // The API timeout on GitHub is 10 seconds, see: https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api#timeouts
-    return new TimeoutWebGraphQlInterceptor(Duration.ofSeconds(10));
+    return new TimeoutWebGraphQlInterceptor(applicationProperties.graphQl().timeout());
   }
 
   @Bean

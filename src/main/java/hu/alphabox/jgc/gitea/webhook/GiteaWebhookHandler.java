@@ -1,5 +1,6 @@
 package hu.alphabox.jgc.gitea.webhook;
 
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.webhook.GiteaWebhookPushEvent.Commit;
 import hu.alphabox.jgc.github.webhook.WebhookService;
 import jakarta.validation.Valid;
@@ -20,12 +21,17 @@ public class GiteaWebhookHandler {
 
   public static final String API_MAPPING = "/api/gitea/webhook";
   private final WebhookService webhookService;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @PostMapping(headers = {"x-gitea-event=push"})
   void handlePushEvent(
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPushEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Push event occurred in repository: {}, commits: {}, installation id: {}",
         event.repository().fullName(),
@@ -43,6 +49,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookBranchCreationEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     if (event.refType() == GiteaEntityReferenceType.BRANCH) {
       log.info(
           "Branch creation event occurred in repository: {}, ref: {} ({}), installation id: {}",
@@ -64,6 +74,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookBranchDeletionEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     if (event.refType() == GiteaEntityReferenceType.BRANCH) {
       log.info(
           "Branch deletion event occurred in repository: {}, ref: {}, installation id: {}",
@@ -84,6 +98,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookRepositoryEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Repository event occurred, repository: {}, action: {}, installation id: {}",
         event.repository().fullName(),
@@ -102,6 +120,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Pull request event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -121,6 +143,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Review request for pull request event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -140,6 +166,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Pull request comment event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -164,6 +194,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Pull request review rejected event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -183,6 +217,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Pull request review approved event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -202,6 +240,10 @@ public class GiteaWebhookHandler {
       @PathVariable("installation-id") Integer installationId,
       @RequestBody @Valid GiteaWebhookPullRequestEvent event
   ) {
+    if (!isAllowedRepository(event.repository().fullName())) {
+      return;
+    }
+
     log.info(
         "Pull request review comment event occurred, repository: {}, action: {}, PR number: {}, installation id: {}",
         event.repository().fullName(),
@@ -211,6 +253,10 @@ public class GiteaWebhookHandler {
     );
     log.debug("Received event: {}", event);
     webhookService.convertAndSendPullRequestReview(event, installationId, "edited");
+  }
+
+  private boolean isAllowedRepository(String repositoryFullName) {
+    return allowedRepositoryService.isAllowed(repositoryFullName);
   }
 
 }

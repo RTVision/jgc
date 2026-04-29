@@ -20,7 +20,7 @@ import org.springframework.web.client.HttpClientErrorException;
 
 @Service
 @RequiredArgsConstructor
-class InstallationService {
+public class InstallationService {
 
   private static final String CLIENT_ID_PREFIX = "Iv1.";
 
@@ -69,7 +69,7 @@ class InstallationService {
     }
   }
 
-  Optional<Organization> findOrganizationForUser(Long organizationId) {
+  public Optional<Organization> findOrganizationForUser(Long organizationId) {
     int limit = 50;
     int page = 1;
     int totalCount;
