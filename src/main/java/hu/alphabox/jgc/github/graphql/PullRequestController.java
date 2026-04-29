@@ -5,10 +5,8 @@ import hu.alphabox.jgc.config.LogTopic;
 import hu.alphabox.jgc.gitea.GiteaPageResponse;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Commit;
-import hu.alphabox.jgc.gitea.client.model.PullReview;
 import hu.alphabox.jgc.github.graphql.mapper.PullRequestMapper;
 import hu.alphabox.jgc.github.graphql.mapper.PullRequestMapper.PullRequestCommitMapper;
-import hu.alphabox.jgc.github.graphql.mapper.PullRequestMapper.PullRequestReviewMapper;
 import hu.alphabox.jgc.github.graphql.schema.IssueOrder;
 import hu.alphabox.jgc.github.graphql.schema.PullRequest;
 import hu.alphabox.jgc.github.graphql.schema.PullRequestCommitConnection;
@@ -16,11 +14,6 @@ import hu.alphabox.jgc.github.graphql.schema.PullRequestConnection;
 import hu.alphabox.jgc.github.graphql.schema.PullRequestReviewConnection;
 import hu.alphabox.jgc.github.graphql.schema.PullRequestState;
 import hu.alphabox.jgc.github.graphql.schema.Repository;
-import hu.alphabox.jgc.github.graphql.schema.ReviewRequest;
-import hu.alphabox.jgc.github.graphql.schema.ReviewRequestConnection;
-import hu.alphabox.jgc.github.graphql.schema.ReviewRequestEdge;
-import hu.alphabox.jgc.github.graphql.schema.User;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -38,13 +31,12 @@ import org.springframework.web.client.HttpClientErrorException;
 @RequiredArgsConstructor
 class PullRequestController {
 
-  private static final int MAX_PULL_REQUEST_REVIEWS = 5;
-  private static final int MAX_PULL_REQUEST_COMMITS = 5;
+  private static final int MAX_PULL_REQUESTS = 10;
+  private static final int MAX_PULL_REQUEST_COMMITS = 1;
 
   private final GiteaClient giteaClient;
   private final PullRequestMapper mapper;
   private final PullRequestCommitMapper commitMapper;
-  private final PullRequestReviewMapper reviewMapper;
 
   @SchemaMapping(typeName = "Repository", field = "pullRequest")
   PullRequest pullRequest(
@@ -74,6 +66,7 @@ class PullRequestController {
       @Argument IssueOrder orderBy
   ) {
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
+    int limit = Math.min(Objects.requireNonNullElse(first, MAX_PULL_REQUESTS), MAX_PULL_REQUESTS);
     try {
       GiteaPageResponse<hu.alphabox.jgc.gitea.client.model.PullRequest> response = GiteaPageResponse.of(giteaClient.repoListPullRequests(
           repository.owner().login(),
@@ -85,7 +78,7 @@ class PullRequestController {
           null,
           null,
           page,
-          first
+          limit
       ));
 
       log.info(
@@ -107,42 +100,12 @@ class PullRequestController {
       @Argument String after,
       @Argument Integer first
   ) {
-    int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
-    int limit = Math.min(Objects.requireNonNullElse(first, MAX_PULL_REQUEST_REVIEWS), MAX_PULL_REQUEST_REVIEWS);
-
-    GiteaPageResponse<PullReview> response = GiteaPageResponse.of(giteaClient.repoListPullReviews(
-        pullRequest.getRepository().owner().login(),
-        pullRequest.getRepository().name(),
-        Long.valueOf(pullRequest.getNumber()),
-        page,
-        limit
-    ));
-
-    log.info(
-        "Fetching pull requests reviews for: {} with PR number: {}\nCurrent page: {}, Total pull request review count: {}",
-        "%s/%s".formatted(pullRequest.getRepository().owner().login(), pullRequest.getRepository().name()),
-        pullRequest.getNumber(),
-        page,
-        response.totalCount()
+    return new PullRequestReviewConnection(
+        Collections.emptyList(),
+        Collections.emptyList(),
+        hu.alphabox.jgc.github.graphql.schema.PageInfo.empty(),
+        0
     );
-    // Remove requested reviewers who have already provided any feedback on the pull request,
-    // since the GitHub API only returns those who are still in the "requested" state.
-    if (pullRequest.getReviewRequests().getNodes() != null) {
-      List<ReviewRequest> reviewRequests = new ArrayList<>(pullRequest.getReviewRequests().getNodes());
-      List<String> reviewerUsers = response.data().stream()
-          .map(PullReview::user)
-          .map(hu.alphabox.jgc.gitea.client.model.User::login)
-          .toList();
-      reviewRequests.removeIf(rr -> reviewerUsers.contains(((User) rr.getRequestedReviewer()).login()));
-
-      pullRequest.setReviewRequests(new ReviewRequestConnection(
-          reviewRequests.stream().map(rr -> new ReviewRequestEdge(null /* TODO */, rr)).toList(),
-          reviewRequests,
-          null, // TODO
-          reviewRequests.size()
-      ));
-    }
-    return reviewMapper.map(String.valueOf(page), response, pullRequest);
   }
 
   // FIXME The logged GraphQL queries are using backward pagination, but for some reason, we check the forward pagination arguments
