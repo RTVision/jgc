@@ -64,13 +64,15 @@ class RepositoryController {
       return null;
     }
 
-    String refType = refPrefix.substring(refPrefix.indexOf('/') + 1);
+    String normalizedRefPrefix = refPrefix.endsWith("/") ? refPrefix : refPrefix + "/";
     int pageSize = Objects.requireNonNullElse(first, 10);
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
 
-    if ("heads".equals(refType)) {
+    if ("refs/heads/".equals(normalizedRefPrefix)) {
       return defaultBranchRefConnection(repository, page);
     }
+
+    String refType = normalizedRefPrefix.substring(normalizedRefPrefix.indexOf('/') + 1).replace("/", "");
 
     try {
       ResponseEntity<List<Reference>> response = giteaClient.repoListGitRefs(
