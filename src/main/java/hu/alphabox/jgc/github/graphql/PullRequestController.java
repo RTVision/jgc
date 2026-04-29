@@ -38,6 +38,9 @@ import org.springframework.web.client.HttpClientErrorException;
 @RequiredArgsConstructor
 class PullRequestController {
 
+  private static final int MAX_PULL_REQUEST_REVIEWS = 5;
+  private static final int MAX_PULL_REQUEST_COMMITS = 5;
+
   private final GiteaClient giteaClient;
   private final PullRequestMapper mapper;
   private final PullRequestCommitMapper commitMapper;
@@ -105,13 +108,14 @@ class PullRequestController {
       @Argument Integer first
   ) {
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
+    int limit = Math.min(Objects.requireNonNullElse(first, MAX_PULL_REQUEST_REVIEWS), MAX_PULL_REQUEST_REVIEWS);
 
     GiteaPageResponse<PullReview> response = GiteaPageResponse.of(giteaClient.repoListPullReviews(
         pullRequest.getRepository().owner().login(),
         pullRequest.getRepository().name(),
         Long.valueOf(pullRequest.getNumber()),
         page,
-        first
+        limit
     ));
 
     log.info(
@@ -151,7 +155,7 @@ class PullRequestController {
       @Argument Integer last
   ) {
     int page = Integer.parseInt(Objects.requireNonNullElse(after, "1"));
-    int limit = Objects.requireNonNullElse(first, 100);
+    int limit = Math.min(Objects.requireNonNullElse(first, MAX_PULL_REQUEST_COMMITS), MAX_PULL_REQUEST_COMMITS);
 
     // as we don't get the changed files number from pull request listing, and get an error for PR commits if the PR branches missing,
     // we have to get PR base information to check anything changed in PR
