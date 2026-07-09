@@ -1,6 +1,7 @@
 package hu.alphabox.jgc.github.app;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,10 +45,17 @@ public class GitHubAppInstallation {
     private final Long id;
     @Setter
     private Long organizationId;
+    @Setter
+    private Set<String> selectedRepositories = new LinkedHashSet<>();
 
     @JsonIgnore
     public boolean isConfigured() {
       return organizationId != null;
+    }
+
+    @JsonIgnore
+    public boolean hasSelectedRepositories() {
+      return selectedRepositories != null && !selectedRepositories.isEmpty();
     }
   }
 

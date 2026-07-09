@@ -14,8 +14,8 @@
       <img src="https://raw.githubusercontent.com/detain/svg-logos/b02ee1ac30c7ff4757278337c95588b01ed0954b/svg/g/gitea.svg" alt="Gitea Logo" class="logo">
     </div>
 
-    <h2 class="ui header center aligned">Select Organization</h2>
-    <p class="center aligned description">Choose an organization to continue</p>
+    <h2 class="ui header center aligned" th:text="${organizationName != null ? 'Select Repositories' : 'Select Organization'}">Select Organization</h2>
+    <p class="center aligned description" th:text="${organizationName != null ? 'Choose the repositories to connect from ' + organizationName : 'Choose an organization to continue'}">Choose an organization to continue</p>
 
     <div class="search-container">
       <div class="ui input fluid">
@@ -25,10 +25,10 @@
 
     <div class="organizations-scroll-container" id="organizationsScrollContainer">
       <div class="organizations-list" id="organizationsList">
-        <div th:if="${#lists.isEmpty(organizations)}" class="no-organizations">
-          No organizations available
+        <div th:if="${(organizations == null or #lists.isEmpty(organizations)) and (repositories == null or #lists.isEmpty(repositories))}" class="no-organizations">
+          No options available
         </div>
-        <div th:each="org : ${organizations}" class="organization-item" th:attr="data-id=${org.id}" th:data-name="${org.name}">
+        <div th:each="org : ${organizations}" class="organization-item" th:if="${organizations != null}" th:attr="data-id=${org.id}" th:data-name="${org.name}">
           <div class="org-avatar">
             <img th:src="${org.avatarUrl}" th:alt="${org.name}" class="avatar-image">
           </div>
@@ -39,13 +39,24 @@
             <div class="selection-indicator"></div>
           </div>
         </div>
+        <label th:each="repository : ${repositories}" th:if="${repositories != null}" class="organization-item" th:attr="data-repository=${repository.fullName}">
+          <div class="org-avatar">
+            <img th:src="${repository.owner.avatarUrl}" th:alt="${repository.fullName}" class="avatar-image">
+          </div>
+          <div class="org-content">
+            <div class="org-name" th:text="${repository.fullName}">owner/repo</div>
+          </div>
+          <div class="org-selector">
+            <input type="checkbox" class="repo-checkbox" th:value="${repository.fullName}" th:checked="${selectedRepositories != null and #sets.contains(selectedRepositories, repository.fullName)}">
+          </div>
+        </label>
       </div>
     </div>
 
     <div class="ui divider compact"></div>
 
     <div class="button-container compact">
-      <button type="button" class="ui primary button" id="selectBtn" disabled>Select Organization</button>
+      <button type="button" class="ui primary button" id="selectBtn" th:text="${organizationName != null ? 'Save Selection' : 'Select Organization'}" disabled>Select Organization</button>
     </div>
   </div>
 </div>
@@ -54,6 +65,7 @@
   /*<![CDATA[*/
   let selectedOrgId = null;
   let selectedOrgName = null;
+  const isRepositorySelection = [[${organizationName != null}]];
 
   function selectOrganization(orgId, orgName) {
     selectedOrgId = orgId;
@@ -76,7 +88,8 @@
     const orgItems = document.querySelectorAll('.organization-item');
 
     orgItems.forEach(item => {
-      const orgName = item.getAttribute('data-name').toLowerCase();
+      const sourceName = item.getAttribute('data-name') || item.getAttribute('data-repository') || '';
+      const orgName = sourceName.toLowerCase();
       if (orgName.includes(searchTerm)) {
         item.style.display = 'flex';
       } else {
@@ -87,17 +100,36 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.organization-item').forEach(item => {
-      item.addEventListener('click', function () {
-        const orgId = this.getAttribute('data-id');
-        const orgName = this.getAttribute('data-name');
-        selectOrganization(orgId, orgName);
-      });
+      if (!isRepositorySelection) {
+        item.addEventListener('click', function () {
+          const orgId = this.getAttribute('data-id');
+          const orgName = this.getAttribute('data-name');
+          selectOrganization(orgId, orgName);
+        });
+      } else {
+        item.addEventListener('click', function (event) {
+          if (event.target.classList.contains('repo-checkbox')) {
+            return;
+          }
+          const checkbox = this.querySelector('.repo-checkbox');
+          checkbox.checked = !checkbox.checked;
+          updateRepositorySelection();
+        });
+      }
     });
 
     document.getElementById('orgSearch').addEventListener('input', filterOrganizations);
 
+    if (isRepositorySelection) {
+      updateRepositorySelection();
+    }
+
+    document.querySelectorAll('.repo-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', updateRepositorySelection);
+    });
+
     document.getElementById('selectBtn').addEventListener('click', function () {
-      if (selectedOrgId) {
+      if (!isRepositorySelection && selectedOrgId) {
         const installationId = [[${installationId}]];
         this.innerHTML = '<div class="ui active mini inline loader"></div> Connecting...';
         this.disabled = true;
@@ -114,9 +146,32 @@
         .catch(error => {
           window.location.href = /*[[@{/application-error}]]*/ "/application-error";
         });
+      } else if (isRepositorySelection) {
+        const installationId = [[${installationId}]];
+        const repositories = Array.from(document.querySelectorAll('.repo-checkbox:checked')).map(checkbox => checkbox.value);
+        this.innerHTML = '<div class="ui active mini inline loader"></div> Saving...';
+        this.disabled = true;
+        axios.post('/installations/' + installationId + '/repositories/select', {
+          repositories: repositories
+        })
+        .then(response => {
+          if (response.status === 200 && response.data && response.data.redirectUrl) {
+            window.location.href = response.data.redirectUrl;
+          } else {
+            window.location.href = /*[[@{/application-error}]]*/ "/application-error";
+          }
+        })
+        .catch(error => {
+          window.location.href = /*[[@{/application-error}]]*/ "/application-error";
+        });
       }
     });
   });
+
+  function updateRepositorySelection() {
+    const checked = document.querySelectorAll('.repo-checkbox:checked').length;
+    document.getElementById('selectBtn').disabled = checked === 0;
+  }
   /*]]>*/
 </script>
 </body>

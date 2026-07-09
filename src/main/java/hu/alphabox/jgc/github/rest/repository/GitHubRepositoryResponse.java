@@ -8,7 +8,7 @@ import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-record GitHubRepositoryResponse(
+public record GitHubRepositoryResponse(
     Long id,
     String nodeId,
     String name,

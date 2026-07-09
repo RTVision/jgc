@@ -14,6 +14,7 @@ import hu.alphabox.jgc.github.app.install.InstallationResponse.AccountResponse;
 import hu.alphabox.jgc.github.app.install.UserInstallationsResponse.Installation.Account;
 import jakarta.validation.Valid;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -62,11 +63,7 @@ class InstallationHandler {
 
     Installation installation = optionalInstallation.get();
     OrganizationSelectResponse successResponse = new OrganizationSelectResponse(
-        UriComponentsBuilder
-            .fromUriString(appInstallation.getSetupUrl())
-            .queryParam("state", "non-spa")
-            .queryParam("installation_id", installation.getId())
-            .toUriString()
+        "/jira-gitea-connector/installations/%d/repositories".formatted(installation.getId())
     );
 
     if (installation.isConfigured()) {
@@ -84,10 +81,40 @@ class InstallationHandler {
     giteaClient.orgCreateHook(organization.name(), createHookRequest(installationId, appInstallation.getWebhookSecret()));
 
     installation.setOrganizationId(organization.id());
+    installation.setSelectedRepositories(new LinkedHashSet<>());
     installationManager.save();
 
     log.info("New installation configured with organization ID: {}", installation.getOrganizationId());
     return ResponseEntity.ok(successResponse);
+  }
+
+  @PostMapping("/installations/{installation-id}/repositories/select")
+  ResponseEntity<OrganizationSelectResponse> selectRepositories(
+      @PathVariable("installation-id") Long installationId,
+      @RequestBody RepositorySelectRequest request
+  ) {
+    Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
+    if (optionalAppInstallation.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
+    GitHubAppInstallation appInstallation = optionalAppInstallation.get();
+    Optional<Installation> optionalInstallation = appInstallation.getInstallation(installationId);
+    if (optionalInstallation.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
+    Installation installation = optionalInstallation.get();
+    installation.setSelectedRepositories(new LinkedHashSet<>(request.repositories()));
+    installationManager.save();
+
+    return ResponseEntity.ok(new OrganizationSelectResponse(
+        UriComponentsBuilder
+            .fromUriString(appInstallation.getSetupUrl())
+            .queryParam("state", "non-spa")
+            .queryParam("installation_id", installation.getId())
+            .toUriString()
+    ));
   }
 
   private CreateHookOption createHookRequest(Long installationId, String webhookSecret) {
@@ -147,7 +174,7 @@ class InstallationHandler {
                 organization.name(),
                 ActorType.ORGANIZATION
             ),
-            RepositorySelection.ALL,
+            installation.hasSelectedRepositories() ? RepositorySelection.SELECTED : RepositorySelection.ALL,
             "%s/api/v3/app/installations/%d/access_tokens".formatted(
                 properties.baseUrl(),
                 installation.getId()
@@ -210,7 +237,7 @@ class InstallationHandler {
                   ActorType.ORGANIZATION,
                   appInstallation.getDefaultPermissions(),
                   appInstallation.getDefaultEvents(),
-                  RepositorySelection.ALL
+                  installation.hasSelectedRepositories() ? RepositorySelection.SELECTED : RepositorySelection.ALL
               );
             }).toList()
         )

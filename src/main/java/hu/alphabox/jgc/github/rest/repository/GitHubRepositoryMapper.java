@@ -11,7 +11,7 @@ import org.mapstruct.Mapping;
     config = MapperCentralConfig.class,
     uses = TypeConversionMapper.class
 )
-interface GitHubRepositoryMapper {
+public interface GitHubRepositoryMapper {
 
   @Mapping(target = "openIssues", source = "openIssuesCount")
   @Mapping(target = "isTemplate", source = "template")
