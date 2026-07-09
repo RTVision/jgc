@@ -90,6 +90,8 @@ class SecurityConfiguration {
             requestMatcherBuilder.matcher("/login/oauth/authorize"),
             requestMatcherBuilder.matcher("/settings/apps/new"),
             requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
+            requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
+            requestMatcherBuilder.matcher("/installations/{installation-id}/repositories/select"),
             requestMatcherBuilder.matcher("/installations/{installation-id}/organizations/select")
         ))
         .authorizeHttpRequests(authorize -> authorize
@@ -101,6 +103,8 @@ class SecurityConfiguration {
               requestMatcherBuilder.matcher("/login/oauth/authorize"),
               requestMatcherBuilder.matcher("/settings/apps/new"),
               requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
+              requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
+              requestMatcherBuilder.matcher("/installations/{installation-id}/repositories/select"),
               requestMatcherBuilder.matcher("/installations/{installation-id}/organizations/select")
           ));
         })
