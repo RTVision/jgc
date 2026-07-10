@@ -59,7 +59,7 @@ class TokenLoginConfigurer extends AbstractHttpConfigurer<TokenLoginConfigurer, 
   public void init(HttpSecurity http) {
     super.init(http);
 
-    filter.setAuthenticationFailureHandler(new SimpleUrlAuthenticationFailureHandler("/login/token"));
+    filter.setAuthenticationFailureHandler(new SimpleUrlAuthenticationFailureHandler("/login/token?error"));
     registerAuthenticationEntryPoint(http);
   }
 

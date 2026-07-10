@@ -15,6 +15,9 @@
 
     <h2 class="ui header center aligned">Enter Access Token</h2>
     <p class="center aligned description">Please provide your personal access token to connect.</p>
+    <p class="center aligned description" th:if="${param.error != null}" style="color: #c0392b;">
+      Login failed. The token must match the access token configured for the connector.
+    </p>
 
     <form id="tokenForm" action="/login/token" method="POST">
       <!--      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>-->
@@ -38,25 +41,10 @@
 </div>
 
 <script>
-  document.getElementById('tokenForm').addEventListener('submit', function (event) {
+  document.getElementById('tokenForm').addEventListener('submit', function () {
     const loginBtn = document.getElementById('loginBtn');
-    const tokenInput = document.getElementById('accessToken');
-
-    // A HTML5 validáció futtatása
-    if (!tokenInput.checkValidity()) {
-      // Ha nem valid, a böngésző megjeleníti a hibaüzenetet (pl. "Töltse ki ezt a mezőt")
-      // és a submit eseményt meg kell akadályozni a régi böngészők kompatibilitása érdekében,
-      // bár a modern böngészők ezt a 'required' miatt alapból megteszik.
-      return;
-    }
-
-    // A kód csak akkor fut le, ha a HTML5 validáció sikeres volt
-
-    // Vizuális visszajelzés a gombnál (betöltés jelzés)
     loginBtn.innerHTML = '<div class="ui active mini inline loader"></div> Connecting...';
     loginBtn.disabled = true;
-
-    // Az űrlap ezután elküldődik a megadott 'action="/login"' URL-re.
   });
 </script>
 </body>
