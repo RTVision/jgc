@@ -49,7 +49,8 @@ public record GitHubRepositoryResponse(
     URI notificationsUrl,
     URI pullsUrl,
     URI releasesUrl,
-    URI sshUrl,
+    // GitHub serves ssh_url in scp-like syntax (git@host:owner/repo.git), which is not a valid URI
+    String sshUrl,
     URI stargazersUrl,
     URI statusesUrl,
     URI subscribersUrl,
