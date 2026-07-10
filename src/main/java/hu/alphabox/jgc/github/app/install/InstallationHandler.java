@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
@@ -46,6 +47,7 @@ class InstallationHandler {
   @PostMapping("/installations/{installation-id}/organizations/select")
   ResponseEntity<OrganizationSelectResponse> selectOrganization(
       @PathVariable("installation-id") Long installationId,
+      @RequestParam(value = "state", required = false) String state,
       @RequestBody @Valid OrganizationSelectRequest request
   ) {
     Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
@@ -62,9 +64,12 @@ class InstallationHandler {
     }
 
     Installation installation = optionalInstallation.get();
-    OrganizationSelectResponse successResponse = new OrganizationSelectResponse(
-        "/jira-gitea-connector/installations/%d/repositories".formatted(installation.getId())
-    );
+    UriComponentsBuilder repositoriesUri = UriComponentsBuilder
+        .fromPath("/jira-gitea-connector/installations/%d/repositories".formatted(installation.getId()));
+    if (state != null) {
+      repositoriesUri.queryParam("state", state);
+    }
+    OrganizationSelectResponse successResponse = new OrganizationSelectResponse(repositoriesUri.toUriString());
 
     if (installation.isConfigured()) {
       log.warn("Installation with id: {} already configured for organization: {}", installation.getId(), installation.getOrganizationId());
@@ -91,6 +96,7 @@ class InstallationHandler {
   @PostMapping("/installations/{installation-id}/repositories/select")
   ResponseEntity<OrganizationSelectResponse> selectRepositories(
       @PathVariable("installation-id") Long installationId,
+      @RequestParam(value = "state", required = false) String state,
       @RequestBody RepositorySelectRequest request
   ) {
     Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
@@ -111,7 +117,8 @@ class InstallationHandler {
     return ResponseEntity.ok(new OrganizationSelectResponse(
         UriComponentsBuilder
             .fromUriString(appInstallation.getSetupUrl())
-            .queryParam("state", "non-spa")
+            // the Jira plugin validates the state it opened the flow with (e.g. "spa")
+            .queryParam("state", state != null ? state : "non-spa")
             .queryParam("installation_id", installation.getId())
             .toUriString()
     ));

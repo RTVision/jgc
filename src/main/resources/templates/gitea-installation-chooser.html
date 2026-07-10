@@ -176,7 +176,7 @@
         const installationId = [[${installationId}]];
         this.innerHTML = '<div class="ui active mini inline loader"></div> Connecting...';
         this.disabled = true;
-        axios.post('/installations/' + installationId + '/organizations/select', {
+        axios.post('/installations/' + installationId + '/organizations/select' + stateQuery(), {
           organizationId: selectedOrgId
         })
         .then(response => {
@@ -196,7 +196,7 @@
             : Array.from(document.querySelectorAll('.repo-checkbox:checked')).map(checkbox => checkbox.value);
         this.innerHTML = '<div class="ui active mini inline loader"></div> Saving...';
         this.disabled = true;
-        axios.post('/installations/' + installationId + '/repositories/select', {
+        axios.post('/installations/' + installationId + '/repositories/select' + stateQuery(), {
           repositories: repositories
         })
         .then(response => {
@@ -212,6 +212,11 @@
       }
     });
   });
+
+  function stateQuery() {
+    const state = new URLSearchParams(window.location.search).get('state');
+    return state ? '?state=' + encodeURIComponent(state) : '';
+  }
 
   function updateRepositorySelection() {
     if (repositoryScope === 'all') {
