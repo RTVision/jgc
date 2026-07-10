@@ -6,7 +6,7 @@ import tools.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(SnakeCaseStrategy.class)
-record GitHubUserResponse(
+public record GitHubUserResponse(
     String login,
     Long id,
     String nodeId,

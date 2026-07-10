@@ -4,6 +4,7 @@ import hu.alphabox.jgc.TypeConversionMapper;
 import hu.alphabox.jgc.config.MapperCentralConfig;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.User;
+import java.util.List;
 import lombok.Setter;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -15,7 +16,7 @@ import org.springframework.web.client.HttpClientErrorException;
     config = MapperCentralConfig.class,
     uses = TypeConversionMapper.class
 )
-abstract class GitHubUserMapper {
+public abstract class GitHubUserMapper {
 
   @Setter(onMethod_ = @Autowired)
   private GiteaClient giteaClient;
@@ -24,7 +25,9 @@ abstract class GitHubUserMapper {
   @Mapping(target = "siteAdmin", source = "isAdmin")
   @Mapping(target = "createdAt", source = "created")
   @Mapping(target = "type", source = "login", qualifiedByName = "type")
-  abstract GitHubUserResponse map(User user);
+  public abstract GitHubUserResponse map(User user);
+
+  public abstract List<GitHubUserResponse> map(List<User> users);
 
   @Named("type")
   protected String type(String login) {

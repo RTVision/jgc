@@ -1,6 +1,7 @@
 package hu.alphabox.jgc.gitea.client;
 
 import hu.alphabox.jgc.gitea.client.model.Branch;
+import hu.alphabox.jgc.gitea.client.model.BranchProtection;
 import hu.alphabox.jgc.gitea.client.model.Commit;
 import hu.alphabox.jgc.gitea.client.model.ContentsResponse;
 import hu.alphabox.jgc.gitea.client.model.CreateBranchRepoOption;
@@ -11,6 +12,7 @@ import hu.alphabox.jgc.gitea.client.model.Organization;
 import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.PullReview;
 import hu.alphabox.jgc.gitea.client.model.Reference;
+import hu.alphabox.jgc.gitea.client.model.RepoCollaboratorPermission;
 import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.gitea.client.model.SearchResults;
 import hu.alphabox.jgc.gitea.client.model.User;
@@ -293,6 +295,66 @@ public interface GiteaClient {
   );
 
   /**
+   * GET /repos/{owner}/{repo}/branches/{branch} : Retrieve a specific branch from a repository, including its effective branch protection
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @param branch branch to get (required)
+   * @return Branch (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/branches/{branch}")
+  ResponseEntity<Branch> repoGetBranch(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("branch") String branch
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/branch_protections : List branch protections for a repository
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @return BranchProtectionList (status code 200)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/branch_protections")
+  ResponseEntity<List<BranchProtection>> repoListBranchProtections(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/collaborators : List a repository's collaborators
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @param page  page number of results to return (1-based) (optional)
+   * @param limit page size of results (optional)
+   * @return UserList (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/collaborators")
+  ResponseEntity<List<User>> repoListCollaborators(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @RequestParam(value = "page", required = false) @Nullable Integer page,
+      @RequestParam(value = "limit", required = false) @Nullable Integer limit
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/collaborators/{collaborator}/permission : Check if a user is a collaborator of a repository and return the user's permission
+   *
+   * @param owner         owner of the repo (required)
+   * @param repo          name of the repo (required)
+   * @param collaborator  username of the collaborator (required)
+   * @return RepoCollaboratorPermission (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/collaborators/{collaborator}/permission")
+  ResponseEntity<RepoCollaboratorPermission> repoGetCollaboratorPermission(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("collaborator") String collaborator
+  );
+
+  /**
    * POST /repos/{owner}/{repo}/branches : Create a branch
    *
    * @param owner owner of the repo (required)
@@ -374,6 +436,21 @@ public interface GiteaClient {
    */
   @GetExchange(value = "/user/orgs")
   ResponseEntity<List<Organization>> orgListCurrentUserOrgs(
+      @RequestParam(value = "page", required = false) @Nullable Integer page,
+      @RequestParam(value = "limit", required = false) @Nullable Integer limit
+  );
+
+  /**
+   * GET /orgs/{org}/members : List an organization's members
+   *
+   * @param org   name of the organization (required)
+   * @param page  page number of results to return (1-based) (optional)
+   * @param limit page size of results (optional)
+   * @return UserList (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/orgs/{org}/members")
+  ResponseEntity<List<User>> orgListMembers(
+      @PathVariable("org") String org,
       @RequestParam(value = "page", required = false) @Nullable Integer page,
       @RequestParam(value = "limit", required = false) @Nullable Integer limit
   );

@@ -2,7 +2,10 @@ package hu.alphabox.jgc.github.rest.repository;
 
 import hu.alphabox.jgc.TypeConversionMapper;
 import hu.alphabox.jgc.config.MapperCentralConfig;
+import hu.alphabox.jgc.gitea.client.model.PRBranchInfo;
+import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.PullReview;
+import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.gitea.client.model.Team.PermissionEnum;
 import hu.alphabox.jgc.gitea.client.model.User;
 import hu.alphabox.jgc.github.rest.repository.GitHubPullRequestRequestedReviewersResponse.SimpleUser;
@@ -73,4 +76,13 @@ interface GitHubPullRequestMapper {
   @Mapping(target = "siteAdmin", source = "isAdmin")
   @Mapping(target = "type", constant = "User")
   GitHubPullRequestReviewResponse.SimpleUser reviewUser(User user);
+
+  List<GitHubPullRequestResponse> pullRequests(List<PullRequest> pullRequests);
+
+  GitHubPullRequestResponse pullRequest(PullRequest pullRequest);
+
+  @Mapping(target = "ref", source = "label")
+  GitHubPullRequestResponse.Branch branch(PRBranchInfo branchInfo);
+
+  GitHubPullRequestResponse.Repo repo(Repository repository);
 }

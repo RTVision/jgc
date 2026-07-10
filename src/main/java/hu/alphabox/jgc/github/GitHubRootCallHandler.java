@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
+import tools.jackson.databind.annotation.JsonNaming;
 
 @RestController
 @RequestMapping("/api/v3")
@@ -40,6 +42,18 @@ class GitHubRootCallHandler {
 
       }
     }
+  }
+
+  @JsonNaming(SnakeCaseStrategy.class)
+  record MetaResponse(
+      boolean verifiablePasswordAuthentication
+  ) {
+
+  }
+
+  @GetMapping("/meta")
+  ResponseEntity<MetaResponse> handleMeta() {
+    return ResponseEntity.ok(new MetaResponse(false));
   }
 
   @GetMapping("/rate_limit")

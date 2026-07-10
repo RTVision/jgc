@@ -9,6 +9,8 @@ public record Organization(
     @Nullable
     String avatarUrl,
     @Nullable
+    String description,
+    @Nullable
     Long id,
     @Nullable
     String name

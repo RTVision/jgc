@@ -1,5 +1,6 @@
 package hu.alphabox.jgc.github.rest.repository;
 
+import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Branch;
 import hu.alphabox.jgc.gitea.client.model.Commit;
@@ -29,9 +30,14 @@ class GitHubRefCallHandler {
 
   private final GiteaClient giteaClient;
   private final GitHubRefMapper mapper;
+  private final AllowedRepositoryService allowedRepositoryService;
 
   @GetMapping("/branches")
   ResponseEntity<List<GitHubBranchResponse>> handleBranches(@PathVariable String owner, @PathVariable String repo) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
     log.info("Querying branches for repository {}/{}", owner, repo);
     ResponseEntity<List<Branch>> branches = giteaClient.repoListBranches(owner, repo, 1, 100);
     if (!branches.hasBody() || HttpStatus.NOT_FOUND == branches.getStatusCode()) {
@@ -40,6 +46,27 @@ class GitHubRefCallHandler {
     }
     log.info("Found branches for repository {}/{}", owner, repo);
     return ResponseEntity.ok(mapper.branches(branches.getBody()));
+  }
+
+  @GetMapping("/branches/{branch}")
+  ResponseEntity<GitHubBranchResponse> handleBranch(
+      @PathVariable String owner,
+      @PathVariable String repo,
+      @PathVariable String branch
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      log.info("Querying branch {} for repository {}/{}", branch, owner, repo);
+      ResponseEntity<Branch> response = giteaClient.repoGetBranch(owner, repo, branch);
+      log.info("Found branch {} for repository {}/{}", branch, owner, repo);
+      return ResponseEntity.ok(mapper.branch(response.getBody()));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("Branch {} not found for repository {}/{}", branch, owner, repo);
+      return ResponseEntity.notFound().build();
+    }
   }
 
   @PostMapping("/git/refs")
