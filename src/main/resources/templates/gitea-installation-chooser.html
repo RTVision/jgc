@@ -23,6 +23,26 @@
       </div>
     </div>
 
+    <div class="repo-scope-container" id="repoScopeContainer" th:if="${organizationName != null}">
+      <div class="organization-item scope-option" id="scopeAllOption" data-scope="all">
+        <div class="org-content">
+          <div class="org-name">All repositories</div>
+          <div class="org-subtext">Give access to all current and future repositories.</div>
+        </div>
+        <div class="org-selector">
+          <div class="selection-indicator"></div>
+        </div>
+      </div>
+      <div class="organization-item scope-option" id="scopeSelectedOption" data-scope="selected">
+        <div class="org-content">
+          <div class="org-name">Only select repositories</div>
+        </div>
+        <div class="org-selector">
+          <div class="selection-indicator"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="organizations-scroll-container" id="organizationsScrollContainer">
       <div class="organizations-list" id="organizationsList">
         <div th:if="${(organizations == null or #lists.isEmpty(organizations)) and (repositories == null or #lists.isEmpty(repositories))}" class="no-organizations">
@@ -66,6 +86,8 @@
   let selectedOrgId = null;
   let selectedOrgName = null;
   const isRepositorySelection = [[${organizationName != null}]];
+  const hasSelectedRepositories = [[${selectedRepositories != null and !#sets.isEmpty(selectedRepositories)}]];
+  let repositoryScope = hasSelectedRepositories ? 'selected' : 'all';
 
   function selectOrganization(orgId, orgName) {
     selectedOrgId = orgId;
@@ -83,9 +105,25 @@
     document.getElementById('selectBtn').disabled = false;
   }
 
+  function selectRepositoryScope(scope) {
+    repositoryScope = scope;
+
+    document.querySelectorAll('.scope-option').forEach(option => {
+      option.classList.toggle('selected', option.getAttribute('data-scope') === scope);
+    });
+
+    const repositoryList = document.getElementById('organizationsScrollContainer');
+    repositoryList.classList.toggle('repo-list-disabled', scope === 'all');
+    document.querySelectorAll('.repo-checkbox').forEach(checkbox => {
+      checkbox.disabled = scope === 'all';
+    });
+
+    updateRepositorySelection();
+  }
+
   function filterOrganizations() {
     const searchTerm = document.getElementById('orgSearch').value.toLowerCase();
-    const orgItems = document.querySelectorAll('.organization-item');
+    const orgItems = document.querySelectorAll('.organization-item:not(.scope-option)');
 
     orgItems.forEach(item => {
       const sourceName = item.getAttribute('data-name') || item.getAttribute('data-repository') || '';
@@ -99,7 +137,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.organization-item').forEach(item => {
+    document.querySelectorAll('.organization-item:not(.scope-option)').forEach(item => {
       if (!isRepositorySelection) {
         item.addEventListener('click', function () {
           const orgId = this.getAttribute('data-id');
@@ -108,7 +146,7 @@
         });
       } else {
         item.addEventListener('click', function (event) {
-          if (event.target.classList.contains('repo-checkbox')) {
+          if (event.target.classList.contains('repo-checkbox') || repositoryScope === 'all') {
             return;
           }
           const checkbox = this.querySelector('.repo-checkbox');
@@ -121,7 +159,12 @@
     document.getElementById('orgSearch').addEventListener('input', filterOrganizations);
 
     if (isRepositorySelection) {
-      updateRepositorySelection();
+      document.querySelectorAll('.scope-option').forEach(option => {
+        option.addEventListener('click', function () {
+          selectRepositoryScope(this.getAttribute('data-scope'));
+        });
+      });
+      selectRepositoryScope(repositoryScope);
     }
 
     document.querySelectorAll('.repo-checkbox').forEach(checkbox => {
@@ -148,7 +191,9 @@
         });
       } else if (isRepositorySelection) {
         const installationId = [[${installationId}]];
-        const repositories = Array.from(document.querySelectorAll('.repo-checkbox:checked')).map(checkbox => checkbox.value);
+        const repositories = repositoryScope === 'all'
+            ? []
+            : Array.from(document.querySelectorAll('.repo-checkbox:checked')).map(checkbox => checkbox.value);
         this.innerHTML = '<div class="ui active mini inline loader"></div> Saving...';
         this.disabled = true;
         axios.post('/installations/' + installationId + '/repositories/select', {
@@ -169,6 +214,10 @@
   });
 
   function updateRepositorySelection() {
+    if (repositoryScope === 'all') {
+      document.getElementById('selectBtn').disabled = false;
+      return;
+    }
     const checked = document.querySelectorAll('.repo-checkbox:checked').length;
     document.getElementById('selectBtn').disabled = checked === 0;
   }

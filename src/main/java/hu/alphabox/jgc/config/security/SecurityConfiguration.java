@@ -91,6 +91,7 @@ class SecurityConfiguration {
             requestMatcherBuilder.matcher("/settings/apps/new"),
             requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
             requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
+            requestMatcherBuilder.matcher("/settings/installations/{installation-id}"),
             requestMatcherBuilder.matcher("/installations/{installation-id}/repositories/select"),
             requestMatcherBuilder.matcher("/installations/{installation-id}/organizations/select")
         ))
@@ -104,6 +105,7 @@ class SecurityConfiguration {
               requestMatcherBuilder.matcher("/settings/apps/new"),
               requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
               requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
+              requestMatcherBuilder.matcher("/settings/installations/{installation-id}"),
               requestMatcherBuilder.matcher("/installations/{installation-id}/repositories/select"),
               requestMatcherBuilder.matcher("/installations/{installation-id}/organizations/select")
           ));

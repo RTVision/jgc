@@ -105,7 +105,7 @@ class InstallationHandler {
     }
 
     Installation installation = optionalInstallation.get();
-    installation.setSelectedRepositories(new LinkedHashSet<>(request.repositories()));
+    installation.setSelectedRepositories(request.repositories() == null ? new LinkedHashSet<>() : new LinkedHashSet<>(request.repositories()));
     installationManager.save();
 
     return ResponseEntity.ok(new OrganizationSelectResponse(

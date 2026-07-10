@@ -193,6 +193,20 @@ textarea {
   border-radius: 50%;
 }
 
+.repo-scope-container {
+  margin-bottom: 0.75rem;
+}
+
+.org-subtext {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.repo-list-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .no-organizations {
   text-align: center;
   color: #666;

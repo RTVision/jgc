@@ -2,6 +2,7 @@ package hu.alphabox.jgc.github.app.install;
 
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Organization;
+import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationMissingException;
@@ -67,6 +68,25 @@ public class InstallationService {
     } catch (HttpClientErrorException.NotFound _) {
       return Collections.emptyList();
     }
+  }
+
+  List<Repository> listAllOrganizationRepositories(String organizationName) {
+    List<Repository> repositories = new ArrayList<>();
+    int limit = 50;
+    int page = 1;
+
+    List<Repository> pageResult;
+    do {
+      ResponseEntity<List<Repository>> response = giteaClient.orgListRepos(organizationName, page, limit);
+      pageResult = response.getBody();
+      if (pageResult == null || pageResult.isEmpty()) {
+        break;
+      }
+      repositories.addAll(pageResult);
+      page++;
+    } while (pageResult.size() == limit);
+
+    return repositories;
   }
 
   public Optional<Organization> findOrganizationForUser(Long organizationId) {

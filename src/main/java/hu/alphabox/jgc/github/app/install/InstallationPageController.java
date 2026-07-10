@@ -2,7 +2,6 @@ package hu.alphabox.jgc.github.app.install;
 
 import hu.alphabox.jgc.ErrorPageController;
 import hu.alphabox.jgc.gitea.AllowedRepositoryService;
-import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Organization;
 import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation;
@@ -23,7 +22,6 @@ class InstallationPageController {
 
   private final InstallationService service;
   private final GitHubAppInstallationManager installationManager;
-  private final GiteaClient giteaClient;
   private final AllowedRepositoryService allowedRepositoryService;
 
   @GetMapping("/jira-gitea-connector/installations/new")
@@ -64,6 +62,11 @@ class InstallationPageController {
     return "gitea-installation-chooser";
   }
 
+  @GetMapping("/settings/installations/{installation-id}")
+  String redirectToRepositorySelector(@PathVariable("installation-id") Long installationId) {
+    return "redirect:/jira-gitea-connector/installations/%d/repositories".formatted(installationId);
+  }
+
   @GetMapping("/jira-gitea-connector/installations/{installation-id}/repositories")
   String showRepositorySelector(@PathVariable("installation-id") Long installationId, Model model) {
     Optional<GitHubAppInstallation> optionalInstallation = installationManager.getAppInstallation();
@@ -99,10 +102,7 @@ class InstallationPageController {
     Organization organization = optionalOrganization.get();
     Set<String> configuredAllowedRepositories = allowedRepositoryService.configuredAllowedRepositories();
 
-    List<Repository> repositories = giteaClient.orgListRepos(organization.name(), 1, 100).getBody();
-    if (repositories == null) {
-      repositories = List.of();
-    }
+    List<Repository> repositories = service.listAllOrganizationRepositories(organization.name());
 
     List<Repository> visibleRepositories = repositories.stream()
         .filter(repository -> configuredAllowedRepositories.isEmpty() || configuredAllowedRepositories.contains(repository.fullName()))

@@ -1,7 +1,6 @@
 package hu.alphabox.jgc.github.app.install;
 
 import hu.alphabox.jgc.gitea.AllowedRepositoryService;
-import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Organization;
 import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation;
@@ -24,7 +23,6 @@ class InstallationRepositoriesHandler {
 
   private final GitHubAppInstallationManager installationManager;
   private final InstallationService installationService;
-  private final GiteaClient giteaClient;
   private final GitHubRepositoryMapper repositoryMapper;
   private final AllowedRepositoryService allowedRepositoryService;
 
@@ -65,10 +63,7 @@ class InstallationRepositoriesHandler {
       return ResponseEntity.notFound().build();
     }
 
-    List<Repository> repositories = giteaClient.orgListRepos(optionalOrganization.get().name(), 1, 100).getBody();
-    if (repositories == null) {
-      repositories = List.of();
-    }
+    List<Repository> repositories = installationService.listAllOrganizationRepositories(optionalOrganization.get().name());
 
     List<Repository> selectedRepositories = repositories.stream()
         .filter(repository -> allowedRepositoryService.isAllowed(repository.fullName()))
