@@ -26,7 +26,9 @@ class GitHubRootCallHandler {
   }
 
   record RateLimitResponse(
-      Resources resources
+      Resources resources,
+      // GitHub also returns the core resource as a top-level "rate" object; some clients only read this
+      Resource rate
   ) {
 
     record Resources(
@@ -60,15 +62,9 @@ class GitHubRootCallHandler {
   ResponseEntity<RateLimitResponse> handleRateLimit() {
     //Gitea currently does not have rate limiting.
     //The header is required so that Jira “believes” we are a GitHub app.
+    Resource resource = new Resource(50500, 50500, Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond());
     return ResponseEntity.ok()
         .header("x-github", "fake")
-        .body(
-            new RateLimitResponse(
-                new Resources(
-                    new Resource(50500, 50500, Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond()),
-                    new Resource(50500, 50500, Instant.now().plus(1, ChronoUnit.MINUTES).getEpochSecond())
-                )
-            )
-        );
+        .body(new RateLimitResponse(new Resources(resource, resource), resource));
   }
 }
