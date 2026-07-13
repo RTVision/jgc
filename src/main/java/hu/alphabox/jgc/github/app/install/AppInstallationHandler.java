@@ -43,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableConfigurationProperties(ApplicationProperties.class)
 class AppInstallationHandler {
 
-  private static final Long APPLICATION_DEFAULT_ID = 1L;
+  static final Long APPLICATION_DEFAULT_ID = 1L;
   private static final String APPLICATION_NAME = "Gitea";
 
   private final InstallationService service;
