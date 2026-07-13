@@ -5,6 +5,8 @@ import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.ContentsResponse;
 import hu.alphabox.jgc.gitea.client.model.Repository;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Collections;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +60,25 @@ class GitHubRepositoryCallHandler {
       return ResponseEntity.ok(mapper.content(response.getBody()));
     } catch (HttpClientErrorException.NotFound _) {
       log.info("No repository contents {} found in: {}/{}", path, owner, repo);
+      return ResponseEntity.notFound().build();
+    }
+  }
+
+  @GetMapping("/languages")
+  ResponseEntity<Map<String, Long>> handleLanguages(@PathVariable String owner, @PathVariable String repo) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      log.info("Querying for languages in repository: {}/{}", owner, repo);
+      ResponseEntity<Map<String, Long>> response = giteaClient.repoGetLanguages(owner, repo);
+      if (!response.hasBody()) {
+        return ResponseEntity.ok(Collections.emptyMap());
+      }
+      return ResponseEntity.ok(response.getBody());
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("No languages found in repository: {}/{}", owner, repo);
       return ResponseEntity.notFound().build();
     }
   }

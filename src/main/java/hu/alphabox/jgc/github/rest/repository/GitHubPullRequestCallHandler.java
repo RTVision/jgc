@@ -3,6 +3,7 @@ package hu.alphabox.jgc.github.rest.repository;
 import hu.alphabox.jgc.LinkHeaderProcessor;
 import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
+import hu.alphabox.jgc.gitea.client.model.ChangedFile;
 import hu.alphabox.jgc.gitea.client.model.PullReview;
 import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -163,6 +164,33 @@ class GitHubPullRequestCallHandler {
     } catch (HttpClientErrorException.NotFound _) {
       log.info("No pull request requested reviewers found for pull number: {} in {}/{}", pullNumber, owner, repo);
       return ResponseEntity.ok(new GitHubPullRequestRequestedReviewersResponse(Collections.emptyList(), Collections.emptyList()));
+    }
+  }
+
+  @GetMapping("/{pull_number}/files")
+  ResponseEntity<List<GitHubPullRequestFileResponse>> files(
+      @PathVariable String owner,
+      @PathVariable String repo,
+      @PathVariable("pull_number") Long pullNumber,
+      @RequestParam(value = "per_page", defaultValue = "30") Integer limit,
+      @RequestParam(value = "page", defaultValue = "1") Integer page
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      log.info("Querying for changed files for pull number: {} in {}/{} at page {}", pullNumber, owner, repo, page);
+      ResponseEntity<List<ChangedFile>> response = giteaClient.repoGetPullRequestFiles(owner, repo, pullNumber, page, limit);
+      if (!response.hasBody()) {
+        log.info("No changed files found for pull number: {} in {}/{} at page {}", pullNumber, owner, repo, page);
+        return ResponseEntity.ok(Collections.emptyList());
+      }
+      log.info("Successfully returned changed files for pull number: {} in {}/{} at page {}", pullNumber, owner, repo, page);
+      return ResponseEntity.ok(mapper.pullRequestFiles(response.getBody()));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("No changed files found for pull number: {} in {}/{} at page {}", pullNumber, owner, repo, page);
+      return ResponseEntity.ok(Collections.emptyList());
     }
   }
 

@@ -4,7 +4,10 @@ import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
 import hu.alphabox.jgc.gitea.client.model.Branch;
 import hu.alphabox.jgc.gitea.client.model.Commit;
+import hu.alphabox.jgc.gitea.client.model.CompareResult;
 import hu.alphabox.jgc.gitea.client.model.CreateBranchRepoOption;
+import hu.alphabox.jgc.gitea.client.model.GitTreeResponse;
+import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.Reference;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URLDecoder;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -30,6 +34,7 @@ class GitHubRefCallHandler {
 
   private final GiteaClient giteaClient;
   private final GitHubRefMapper mapper;
+  private final GitHubPullRequestMapper pullRequestMapper;
   private final AllowedRepositoryService allowedRepositoryService;
 
   @GetMapping("/branches")
@@ -143,6 +148,72 @@ class GitHubRefCallHandler {
 
     } catch (HttpClientErrorException.NotFound _) {
       log.info("Commit not found by ref: {} in {}/{}, ", ref, owner, repo);
+      return ResponseEntity.notFound().build();
+    }
+  }
+
+  @GetMapping("/commits/{sha}/pulls")
+  ResponseEntity<List<GitHubPullRequestResponse>> handleCommitPulls(
+      @PathVariable String owner,
+      @PathVariable String repo,
+      @PathVariable String sha
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      log.info("Looking for pull request associated with commit {} in {}/{}", sha, owner, repo);
+      ResponseEntity<PullRequest> response = giteaClient.repoGetCommitPullRequest(owner, repo, sha);
+      log.info("Pull request found for commit {} in {}/{}", sha, owner, repo);
+      return ResponseEntity.ok(List.of(pullRequestMapper.pullRequest(response.getBody())));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("No pull request found for commit {} in {}/{}", sha, owner, repo);
+      return ResponseEntity.ok(List.of());
+    }
+  }
+
+  @GetMapping("/compare/**")
+  ResponseEntity<GitHubCompareResponse> handleCompare(
+      HttpServletRequest request,
+      @PathVariable String owner,
+      @PathVariable String repo
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    String basehead = URLDecoder.decode(request.getRequestURI().split("/compare/", 2)[1], StandardCharsets.UTF_8);
+    try {
+      log.info("Comparing {} in {}/{}", basehead, owner, repo);
+      ResponseEntity<CompareResult> response = giteaClient.repoCompare(owner, repo, basehead);
+      log.info("Successfully compared {} in {}/{}", basehead, owner, repo);
+      return ResponseEntity.ok(mapper.compare(response.getBody()));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("Compare {} not found in {}/{}", basehead, owner, repo);
+      return ResponseEntity.notFound().build();
+    }
+  }
+
+  @GetMapping("/git/trees/{sha}")
+  ResponseEntity<GitHubTreeResponse> handleGitTree(
+      @PathVariable String owner,
+      @PathVariable String repo,
+      @PathVariable String sha,
+      @RequestParam(value = "recursive", required = false) String recursive
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    boolean isRecursive = recursive != null && !"0".equals(recursive) && !"false".equalsIgnoreCase(recursive);
+    try {
+      log.info("Querying git tree {} in {}/{} (recursive={})", sha, owner, repo, isRecursive);
+      ResponseEntity<GitTreeResponse> response = giteaClient.repoGetGitTree(owner, repo, sha, isRecursive, null, null);
+      log.info("Found git tree {} in {}/{}", sha, owner, repo);
+      return ResponseEntity.ok(mapper.tree(response.getBody()));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("Git tree {} not found in {}/{}", sha, owner, repo);
       return ResponseEntity.notFound().build();
     }
   }

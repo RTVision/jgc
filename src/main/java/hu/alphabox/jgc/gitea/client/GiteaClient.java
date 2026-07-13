@@ -2,12 +2,15 @@ package hu.alphabox.jgc.gitea.client;
 
 import hu.alphabox.jgc.gitea.client.model.Branch;
 import hu.alphabox.jgc.gitea.client.model.BranchProtection;
+import hu.alphabox.jgc.gitea.client.model.ChangedFile;
 import hu.alphabox.jgc.gitea.client.model.Commit;
+import hu.alphabox.jgc.gitea.client.model.CompareResult;
 import hu.alphabox.jgc.gitea.client.model.ContentsResponse;
 import hu.alphabox.jgc.gitea.client.model.CreateBranchRepoOption;
 import hu.alphabox.jgc.gitea.client.model.CreateHookOption;
 import hu.alphabox.jgc.gitea.client.model.EditIssueCommentOption;
 import hu.alphabox.jgc.gitea.client.model.EditIssueOption;
+import hu.alphabox.jgc.gitea.client.model.GitTreeResponse;
 import hu.alphabox.jgc.gitea.client.model.Organization;
 import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.PullReview;
@@ -17,6 +20,7 @@ import hu.alphabox.jgc.gitea.client.model.Repository;
 import hu.alphabox.jgc.gitea.client.model.SearchResults;
 import hu.alphabox.jgc.gitea.client.model.User;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -369,6 +373,89 @@ public interface GiteaClient {
       @PathVariable("owner") String owner,
       @PathVariable("repo") String repo,
       @RequestBody(required = false) @Nullable CreateBranchRepoOption body
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/compare/{basehead} : Get commits between two commits/branches/tags
+   *
+   * @param owner    owner of the repo (required)
+   * @param repo     name of the repo (required)
+   * @param basehead compare two branches or commits (required)
+   * @return CompareResult (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/compare/{basehead}")
+  ResponseEntity<CompareResult> repoCompare(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("basehead") String basehead
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/pulls/{index}/files : Get changed files for a pull request
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @param index index of the pull request (required)
+   * @param page  page number of results to return (1-based) (optional)
+   * @param limit page size of results (optional)
+   * @return list of ChangedFile (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/pulls/{index}/files")
+  ResponseEntity<List<ChangedFile>> repoGetPullRequestFiles(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("index") Long index,
+      @RequestParam(value = "page", required = false) @Nullable Integer page,
+      @RequestParam(value = "limit", required = false) @Nullable Integer limit
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/languages : Get languages and their usage of a repository
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @return map of language name to byte count (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/languages")
+  ResponseEntity<Map<String, Long>> repoGetLanguages(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/git/trees/{sha} : Gets the tree of a repository
+   *
+   * @param owner     owner of the repo (required)
+   * @param repo      name of the repo (required)
+   * @param sha       sha of the commit/tree (required)
+   * @param recursive show all directories and files (optional)
+   * @param page      page number; the 'truncated' field in the response will be true if there are still more items after this page, false otherwise (optional)
+   * @param perPage   number of items per page (optional)
+   * @return GitTreeResponse (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/git/trees/{sha}")
+  ResponseEntity<GitTreeResponse> repoGetGitTree(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("sha") String sha,
+      @RequestParam(value = "recursive", required = false) @Nullable Boolean recursive,
+      @RequestParam(value = "page", required = false) @Nullable Integer page,
+      @RequestParam(value = "per_page", required = false) @Nullable Integer perPage
+  );
+
+  /**
+   * GET /repos/{owner}/{repo}/commits/{sha}/pull : Get the pull request associated with a commit
+   *
+   * @param owner owner of the repo (required)
+   * @param repo  name of the repo (required)
+   * @param sha   SHA of the commit to get the pull request for (required)
+   * @return PullRequest (status code 200) or APINotFound is a not found empty response (status code 404)
+   */
+  @GetExchange(value = "/repos/{owner}/{repo}/commits/{sha}/pull")
+  ResponseEntity<PullRequest> repoGetCommitPullRequest(
+      @PathVariable("owner") String owner,
+      @PathVariable("repo") String repo,
+      @PathVariable("sha") String sha
   );
 
   /**

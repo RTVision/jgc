@@ -2,6 +2,7 @@ package hu.alphabox.jgc.github.rest.repository;
 
 import hu.alphabox.jgc.gitea.AllowedRepositoryService;
 import hu.alphabox.jgc.gitea.client.GiteaClient;
+import hu.alphabox.jgc.gitea.client.model.ChangedFile;
 import hu.alphabox.jgc.gitea.client.model.PRBranchInfo;
 import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.Repository;
@@ -121,6 +122,37 @@ class GitHubPullRequestCallHandlerTest {
 
     Assertions.assertThat(result.getResponseBody().merged()).isTrue();
     Assertions.assertThat(result.getResponseBody().mergeCommitSha()).isEqualTo("merge-sha");
+  }
+
+  @Test
+  void shouldReturnChangedFilesForPullRequest() {
+    Mockito.when(allowedRepositoryService.isAllowed("TestOrg", "TestRepo")).thenReturn(true);
+    Mockito.when(giteaClient.repoGetPullRequestFiles(Mockito.eq("TestOrg"), Mockito.eq("TestRepo"), Mockito.eq(1L), Mockito.anyInt(), Mockito.anyInt()))
+        .thenReturn(ResponseEntity.ok(List.of(new ChangedFile(
+            "src/Main.java",
+            null,
+            "modified",
+            5L,
+            2L,
+            7L,
+            "https://gitea.test/raw/src/Main.java",
+            "https://gitea.test/contents/src/Main.java",
+            null,
+            "@@ -1,2 +1,5 @@ patch content"
+        ))));
+
+    var result = client.get()
+        .uri("/api/v3/repos/TestOrg/TestRepo/pulls/1/files")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(token()))
+        .exchangeSuccessfully()
+        .returnResult(GitHubPullRequestFileResponse[].class)
+        .getResponseBody();
+
+    Assertions.assertThat(result).hasSize(1);
+    Assertions.assertThat(result[0].filename()).isEqualTo("src/Main.java");
+    Assertions.assertThat(result[0].status()).isEqualTo("modified");
+    Assertions.assertThat(result[0].changes()).isEqualTo(7L);
+    Assertions.assertThat(result[0].patch()).isEqualTo("@@ -1,2 +1,5 @@ patch content");
   }
 
   @Test

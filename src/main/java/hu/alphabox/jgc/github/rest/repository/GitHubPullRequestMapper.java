@@ -2,6 +2,7 @@ package hu.alphabox.jgc.github.rest.repository;
 
 import hu.alphabox.jgc.TypeConversionMapper;
 import hu.alphabox.jgc.config.MapperCentralConfig;
+import hu.alphabox.jgc.gitea.client.model.ChangedFile;
 import hu.alphabox.jgc.gitea.client.model.PRBranchInfo;
 import hu.alphabox.jgc.gitea.client.model.PullRequest;
 import hu.alphabox.jgc.gitea.client.model.PullReview;
@@ -85,4 +86,21 @@ interface GitHubPullRequestMapper {
   GitHubPullRequestResponse.Branch branch(PRBranchInfo branchInfo);
 
   GitHubPullRequestResponse.Repo repo(Repository repository);
+
+  default GitHubPullRequestFileResponse pullRequestFile(ChangedFile file) {
+    return new GitHubPullRequestFileResponse(
+        null,
+        file.filename(),
+        file.status(),
+        file.additions(),
+        file.deletions(),
+        file.changes(),
+        file.rawUrl(),
+        file.contentsUrl(),
+        file.previousFilename(),
+        file.patch()
+    );
+  }
+
+  List<GitHubPullRequestFileResponse> pullRequestFiles(List<ChangedFile> files);
 }
