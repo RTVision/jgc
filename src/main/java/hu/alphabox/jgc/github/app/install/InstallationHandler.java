@@ -83,7 +83,11 @@ class InstallationHandler {
     }
 
     Organization organization = optionalOrganization.get();
-    giteaClient.orgCreateHook(organization.name(), createHookRequest(installationId, appInstallation.getWebhookSecret()));
+    if (appInstallation.getWebhookUrl() != null) {
+      giteaClient.orgCreateHook(organization.name(), createHookRequest(installationId, appInstallation.getWebhookSecret()));
+    } else {
+      log.info("App was registered without webhook attributes, skipping Gitea hook creation for organization: {}", organization.name());
+    }
 
     installation.setOrganizationId(organization.id());
     installation.setSelectedRepositories(new LinkedHashSet<>());
@@ -120,6 +124,8 @@ class InstallationHandler {
             // the Jira plugin validates the state it opened the flow with (e.g. "spa")
             .queryParam("state", state != null ? state : "non-spa")
             .queryParam("installation_id", installation.getId())
+            // GitHub always includes setup_action when redirecting to the app's setup URL
+            .queryParam("setup_action", "install")
             .toUriString()
     ));
   }

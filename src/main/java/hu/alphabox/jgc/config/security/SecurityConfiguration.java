@@ -89,6 +89,7 @@ class SecurityConfiguration {
             PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login/token"),
             requestMatcherBuilder.matcher("/login/oauth/authorize"),
             requestMatcherBuilder.matcher("/settings/apps/new"),
+            requestMatcherBuilder.matcher("/settings/apps/{app-slug}/installations"),
             requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
             requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
             requestMatcherBuilder.matcher("/settings/installations/{installation-id}"),
@@ -103,6 +104,7 @@ class SecurityConfiguration {
           configurer.authenticationEntryPointRequestMatcher(new OrRequestMatcher(
               requestMatcherBuilder.matcher("/login/oauth/authorize"),
               requestMatcherBuilder.matcher("/settings/apps/new"),
+              requestMatcherBuilder.matcher("/settings/apps/{app-slug}/installations"),
               requestMatcherBuilder.matcher("/jira-gitea-connector/installations/new"),
               requestMatcherBuilder.matcher("/jira-gitea-connector/installations/{installation-id}/repositories"),
               requestMatcherBuilder.matcher("/settings/installations/{installation-id}"),

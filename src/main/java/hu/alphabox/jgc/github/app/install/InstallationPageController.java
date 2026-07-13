@@ -62,6 +62,12 @@ class InstallationPageController {
     return "gitea-installation-chooser";
   }
 
+  // GitHub's app settings installations page; integrations (e.g. Drata) link here to install the app
+  @GetMapping("/settings/apps/{app-slug}/installations")
+  String redirectToOrganizationSelector() {
+    return "redirect:/jira-gitea-connector/installations/new";
+  }
+
   @GetMapping("/settings/installations/{installation-id}")
   String redirectToRepositorySelector(@PathVariable("installation-id") Long installationId) {
     return "redirect:/jira-gitea-connector/installations/%d/repositories".formatted(installationId);

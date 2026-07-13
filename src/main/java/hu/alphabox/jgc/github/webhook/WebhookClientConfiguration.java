@@ -75,6 +75,9 @@ class WebhookClientConfiguration {
       }
 
       GitHubAppInstallation appInstallation = appInstallationOptional.get();
+      if (appInstallation.getWebhookUrl() == null || appInstallation.getWebhookUrl().isBlank()) {
+        throw new IllegalStateException("The app was registered without a webhook URL, request aborted.");
+      }
 
       request.getHeaders().set(SIGNATURE_HEADER, "sha256=" + WebhookSignature.generateSignature(body, appInstallation.getWebhookSecret()));
       request.getHeaders().set(SIGNATURE_LEGACY_HEADER, "sha1=" + WebhookSignature.generateLegacySignature(body, appInstallation.getWebhookSecret()));

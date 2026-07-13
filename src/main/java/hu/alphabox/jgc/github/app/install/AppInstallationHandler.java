@@ -15,6 +15,8 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -80,6 +82,8 @@ class AppInstallationHandler {
     }
 
     Manifest parsedManifest = jsonMapper.readValue(manifest, Manifest.class);
+    // hook_attributes is optional in the manifest; webhook-less integrations (e.g. Drata) omit it
+    Manifest.HookAttributes hookAttributes = parsedManifest.hookAttributes();
 
     KeyPair keyPair = GitHubAppKeyHandler.generate();
     installationManager.getInstallationRegistrar().mark(
@@ -87,27 +91,28 @@ class AppInstallationHandler {
             APPLICATION_DEFAULT_ID,
             service.generateClientId(),
             service.generateSecret(),
-            parsedManifest.hookAttributes().url(),
+            hookAttributes != null ? hookAttributes.url() : null,
             parsedManifest.callbackUrl(),
             parsedManifest.setupUrl(),
             GitHubAppKeyHandler.asPEMFormattedPKCS8((RSAPrivateKey) keyPair.getPrivate()),
             GitHubAppKeyHandler.asX509SubjectPublicKeyInfo((RSAPublicKey) keyPair.getPublic()),
-            parsedManifest.defaultEvents(),
-            parsedManifest.defaultPermissions(),
+            parsedManifest.defaultEvents() != null ? parsedManifest.defaultEvents() : List.of(),
+            parsedManifest.defaultPermissions() != null ? parsedManifest.defaultPermissions() : Map.of(),
             new HashSet<>(),
             giteaUserId
         )
     );
 
+    // GitHub echoes the state parameter back on the manifest redirect; integrations (e.g. Drata) validate it
+    UriComponentsBuilder redirectBuilder = UriComponentsBuilder
+        .fromUriString(parsedManifest.redirectUrl())
+        .queryParam("code", APPLICATION_DEFAULT_ID);
+    if (state != null) {
+      redirectBuilder.queryParam("state", state);
+    }
+
     return ResponseEntity.status(HttpStatus.FOUND)
-        .header(
-            "Location",
-            UriComponentsBuilder
-                .fromUriString(parsedManifest.redirectUrl())
-                .queryParam("code", APPLICATION_DEFAULT_ID)
-                .build()
-                .toUriString()
-        )
+        .header("Location", redirectBuilder.build().toUriString())
         .build();
   }
 
@@ -170,7 +175,9 @@ class AppInstallationHandler {
   record AccessTokenResponse(
       String token,
       @JsonFormat(shape = JsonFormat.Shape.STRING)
-      Instant expiresAt
+      Instant expiresAt,
+      Map<String, String> permissions,
+      RepositorySelection repositorySelection
   ) {
 
   }
@@ -181,11 +188,21 @@ class AppInstallationHandler {
       @PathVariable("installation-id") Long installationId
   ) {
     OpaqueToken opaqueToken = tokenService.generateToken(authentication, installationId);
+    Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
+    Map<String, String> permissions = optionalAppInstallation
+        .map(GitHubAppInstallation::getDefaultPermissions)
+        .orElseGet(Map::of);
+    RepositorySelection repositorySelection = optionalAppInstallation
+        .flatMap(appInstallation -> appInstallation.getInstallation(installationId))
+        .map(installation -> installation.hasSelectedRepositories() ? RepositorySelection.SELECTED : RepositorySelection.ALL)
+        .orElse(RepositorySelection.ALL);
     return ResponseEntity.status(HttpStatus.CREATED)
         .contentType(MediaType.APPLICATION_JSON)
         .body(new AccessTokenResponse(
             opaqueToken.token(),
-            opaqueToken.expiresAt()
+            opaqueToken.expiresAt(),
+            permissions,
+            repositorySelection
         ));
   }
 
