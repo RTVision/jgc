@@ -66,7 +66,15 @@ class GitHubAppJwtDecoder implements JwtDecoder {
         throw new JwtException("Signed JWT rejected: Invalid signature algorithm.");
       }
 
-      if (!appInstallation.getId().toString().equals(signedJWT.getJWTClaimsSet().getIssuer())) {
+      // Octokit sends the app id as a JSON number in the iss claim; GitHub accepts both, but
+      // Nimbus's strict JWTClaimsSet parsing rejects a non-string iss, so read the raw payload.
+      Map<String, Object> payload = signedJWT.getPayload().toJSONObject();
+      if (payload == null) {
+        log.warn("Signed JWT rejected: payload is not a JSON object.");
+        throw new BadJwtException("Failed to parse token claims.");
+      }
+
+      if (!appInstallation.getId().toString().equals(String.valueOf(payload.get("iss")))) {
         log.warn("Invalid issuer in token.");
         throw new BadJwtException("Invalid issuer in token.");
       }
@@ -78,7 +86,7 @@ class GitHubAppJwtDecoder implements JwtDecoder {
         throw new JwtException("Signed JWT rejected: Invalid signature");
       }
 
-      Map<String, Object> claims = claimSetConverter.convert(signedJWT.getJWTClaimsSet().getClaims());
+      Map<String, Object> claims = claimSetConverter.convert(payload);
       Jwt jwt = Jwt.withTokenValue(token)
           .headers(h -> h.putAll(signedJWT.getHeader().toJSONObject()))
           .claims(c -> c.putAll(claims))
