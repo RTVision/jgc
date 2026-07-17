@@ -10,10 +10,12 @@ import hu.alphabox.jgc.github.GitHubServerAccessTokenService.OpaqueToken;
 import hu.alphabox.jgc.github.app.GitHubAppInstallation;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import hu.alphabox.jgc.github.app.GitHubAppKeyHandler;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,10 @@ class AppInstallationHandler {
 
   static final Long APPLICATION_DEFAULT_ID = 1L;
   private static final String APPLICATION_NAME = "Gitea";
+  // slugified APPLICATION_NAME; also reported as app_slug by the installation endpoint
+  static final String APPLICATION_SLUG = "gitea";
+  // app registration time is not persisted, so report a fixed parseable timestamp
+  private static final Instant REGISTERED_TIMESTAMP = Instant.parse("2024-01-01T00:00:00Z");
 
   private final InstallationService service;
   private final GiteaClient giteaClient;
@@ -129,10 +135,22 @@ class AppInstallationHandler {
     installationManager.setAppInstallation(installation);
     log.debug("New app installation created: {}", installation);
 
+    User giteaUser = giteaClient.userGetCurrent().getBody();
+
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(new AppConversionsResponse(
             installation.getId(),
+            APPLICATION_SLUG,
+            Base64.getEncoder().encodeToString("03:App%d".formatted(installation.getId()).getBytes(StandardCharsets.UTF_8)),
+            GitHubAccountResponse.of(giteaUser.id(), giteaUser.login(), giteaUser.avatarUrl(), ActorType.USER, applicationProperties.baseUrl()),
             APPLICATION_NAME,
+            null,
+            applicationProperties.baseUrl(),
+            "%s/apps/%s".formatted(applicationProperties.baseUrl(), APPLICATION_SLUG),
+            REGISTERED_TIMESTAMP,
+            REGISTERED_TIMESTAMP,
+            installation.getDefaultPermissions(),
+            installation.getDefaultEvents(),
             installation.getClientId(),
             installation.getClientSecret(),
             webhookSecret,

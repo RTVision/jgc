@@ -11,7 +11,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 record InstallationResponse(
     Long id,
     String clientId,
-    AccountResponse account,
+    GitHubAccountResponse account,
     RepositorySelection repositorySelection,
     String accessTokensUrl,
     String repositoriesUrl,
@@ -34,28 +34,5 @@ record InstallationResponse(
     Instant suspendedAt
 ) {
 
-  // mirrors GitHub's simple-user schema; every field in its required list must be present
-  record AccountResponse(
-      Long id,
-      String login,
-      String nodeId,
-      String avatarUrl,
-      String gravatarId,
-      String url,
-      String htmlUrl,
-      String followersUrl,
-      String followingUrl,
-      String gistsUrl,
-      String starredUrl,
-      String subscriptionsUrl,
-      String organizationsUrl,
-      String reposUrl,
-      String eventsUrl,
-      String receivedEventsUrl,
-      ActorType type,
-      Boolean siteAdmin
-  ) {
-
-  }
 
 }
