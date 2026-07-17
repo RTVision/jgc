@@ -13,7 +13,9 @@ import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import hu.alphabox.jgc.github.app.install.InstallationResponse.AccountResponse;
 import hu.alphabox.jgc.github.app.install.UserInstallationsResponse.Installation.Account;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -159,6 +161,30 @@ class InstallationHandler {
     );
   }
 
+  private AccountResponse accountResponse(Organization organization) {
+    String apiUrl = "%s/api/v3/users/%s".formatted(properties.baseUrl(), organization.name());
+    return new AccountResponse(
+        organization.id(),
+        organization.name(),
+        Base64.getEncoder().encodeToString("012:Organization%d".formatted(organization.id()).getBytes(StandardCharsets.UTF_8)),
+        organization.avatarUrl(),
+        "",
+        apiUrl,
+        "%s/%s".formatted(properties.baseUrl(), organization.name()),
+        apiUrl + "/followers",
+        apiUrl + "/following{/other_user}",
+        apiUrl + "/gists{/gist_id}",
+        apiUrl + "/starred{/owner}{/repo}",
+        apiUrl + "/subscriptions",
+        apiUrl + "/orgs",
+        apiUrl + "/repos",
+        apiUrl + "/events{/privacy}",
+        apiUrl + "/received_events",
+        ActorType.ORGANIZATION,
+        false
+    );
+  }
+
   @GetMapping("/api/v3/app/installations/{installation-id}")
   ResponseEntity<InstallationResponse> handleInstallation(@PathVariable("installation-id") long id) {
     Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
@@ -189,14 +215,7 @@ class InstallationHandler {
         new InstallationResponse(
             installation.getId(),
             appInstallation.getClientId(),
-            new AccountResponse(
-                organization.id(),
-                organization.name(),
-                organization.avatarUrl(),
-                "%s/%s".formatted(properties.baseUrl(), organization.name()),
-                ActorType.ORGANIZATION,
-                false
-            ),
+            accountResponse(organization),
             installation.hasSelectedRepositories() ? RepositorySelection.SELECTED : RepositorySelection.ALL,
             "%s/api/v3/app/installations/%d/access_tokens".formatted(
                 properties.baseUrl(),
