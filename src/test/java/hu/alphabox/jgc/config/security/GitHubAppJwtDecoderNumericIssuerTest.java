@@ -50,7 +50,8 @@ class GitHubAppJwtDecoderNumericIssuerTest {
         .uri("/api/v3/app/installations/{installation-id}/access_tokens", installation.getId())
         .header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(jwtWithIssuer(appInstallation, appInstallation.getId())))
         .exchange()
-        .expectStatus().isCreated();
+        .expectStatus().isCreated()
+        .expectHeader().valueEquals("X-GitHub-Enterprise-Version", "3.17.6");
   }
 
   @Test
