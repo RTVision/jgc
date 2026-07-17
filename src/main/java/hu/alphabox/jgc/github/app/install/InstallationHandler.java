@@ -13,6 +13,7 @@ import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import hu.alphabox.jgc.github.app.install.InstallationResponse.AccountResponse;
 import hu.alphabox.jgc.github.app.install.UserInstallationsResponse.Installation.Account;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,6 +39,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 @EnableConfigurationProperties(ApplicationProperties.class)
 @Slf4j
 class InstallationHandler {
+
+  // slugified form of the app name reported by the manifest conversion endpoint ("Gitea")
+  private static final String APP_SLUG = "gitea";
+  // the installation time is not persisted, so report a fixed timestamp; consumers
+  // (e.g. Drata) only need parseable dates, not accurate ones
+  private static final Instant INSTALLATION_TIMESTAMP = Instant.parse("2024-01-01T00:00:00Z");
 
   private final InstallationService service;
   private final GiteaClient giteaClient;
@@ -185,18 +192,35 @@ class InstallationHandler {
             new AccountResponse(
                 organization.id(),
                 organization.name(),
-                ActorType.ORGANIZATION
+                organization.avatarUrl(),
+                "%s/%s".formatted(properties.baseUrl(), organization.name()),
+                ActorType.ORGANIZATION,
+                false
             ),
             installation.hasSelectedRepositories() ? RepositorySelection.SELECTED : RepositorySelection.ALL,
             "%s/api/v3/app/installations/%d/access_tokens".formatted(
                 properties.baseUrl(),
                 installation.getId()
             ),
+            "%s/api/v3/installation/repositories".formatted(properties.baseUrl()),
+            "%s/organizations/%s/settings/installations/%d".formatted(
+                properties.baseUrl(),
+                organization.name(),
+                installation.getId()
+            ),
             appInstallation.getId(),
+            APP_SLUG,
             organization.id(),
             ActorType.ORGANIZATION,
             appInstallation.getDefaultPermissions(),
-            appInstallation.getDefaultEvents()
+            appInstallation.getDefaultEvents(),
+            INSTALLATION_TIMESTAMP,
+            INSTALLATION_TIMESTAMP,
+            null,
+            false,
+            List.of(),
+            null,
+            null
         )
     );
   }
