@@ -3,6 +3,7 @@ package hu.alphabox.jgc.github.app;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -20,6 +21,8 @@ import lombok.ToString;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class GitHubAppInstallation {
 
+  private static final String DEFAULT_NAME = "Gitea";
+
   @EqualsAndHashCode.Include
   private final Long id;
   private final String clientId;
@@ -33,6 +36,8 @@ public class GitHubAppInstallation {
   private final Map<String, String> defaultPermissions;
   private final Set<Installation> installations;
   private final Long ownerId;
+  // app name from the registration manifest; installations registered before it was persisted have none
+  private final String name;
   @Setter
   private String webhookSecret;
 
@@ -57,6 +62,16 @@ public class GitHubAppInstallation {
     public boolean hasSelectedRepositories() {
       return selectedRepositories != null && !selectedRepositories.isEmpty();
     }
+  }
+
+  public String getName() {
+    return name != null ? name : DEFAULT_NAME;
+  }
+
+  // GitHub derives the app slug from its name; integrations (e.g. Drata) check it
+  @JsonIgnore
+  public String getSlug() {
+    return getName().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "");
   }
 
   public Optional<Installation> getInstallation(Long id) {

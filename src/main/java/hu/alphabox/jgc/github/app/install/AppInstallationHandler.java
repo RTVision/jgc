@@ -46,9 +46,6 @@ import tools.jackson.databind.json.JsonMapper;
 class AppInstallationHandler {
 
   static final Long APPLICATION_DEFAULT_ID = 1L;
-  private static final String APPLICATION_NAME = "Gitea";
-  // slugified APPLICATION_NAME; also reported as app_slug by the installation endpoint
-  static final String APPLICATION_SLUG = "gitea";
   // app registration time is not persisted, so report a fixed parseable timestamp
   private static final Instant REGISTERED_TIMESTAMP = Instant.parse("2024-01-01T00:00:00Z");
 
@@ -105,7 +102,8 @@ class AppInstallationHandler {
             parsedManifest.defaultEvents() != null ? parsedManifest.defaultEvents() : List.of(),
             parsedManifest.defaultPermissions() != null ? parsedManifest.defaultPermissions() : Map.of(),
             new HashSet<>(),
-            giteaUserId
+            giteaUserId,
+            parsedManifest.name()
         )
     );
 
@@ -140,13 +138,13 @@ class AppInstallationHandler {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(new AppConversionsResponse(
             installation.getId(),
-            APPLICATION_SLUG,
+            installation.getSlug(),
             Base64.getEncoder().encodeToString("03:App%d".formatted(installation.getId()).getBytes(StandardCharsets.UTF_8)),
             GitHubAccountResponse.of(giteaUser.id(), giteaUser.login(), giteaUser.avatarUrl(), ActorType.USER, applicationProperties.baseUrl()),
-            APPLICATION_NAME,
+            installation.getName(),
             null,
             applicationProperties.baseUrl(),
-            "%s/apps/%s".formatted(applicationProperties.baseUrl(), APPLICATION_SLUG),
+            "%s/apps/%s".formatted(applicationProperties.baseUrl(), installation.getSlug()),
             REGISTERED_TIMESTAMP,
             REGISTERED_TIMESTAMP,
             installation.getDefaultPermissions(),
@@ -175,7 +173,7 @@ class AppInstallationHandler {
         .body(new AppResponse(
             appInstallation.getId(),
             appInstallation.getClientId(),
-            APPLICATION_NAME,
+            appInstallation.getName(),
             "%s/apps/jira-gitea-connector".formatted(applicationProperties.baseUrl()),
             "%s/jira-gitea-connector".formatted(applicationProperties.baseUrl()),
             appInstallation.getInstallations().size(),

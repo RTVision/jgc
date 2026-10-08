@@ -200,7 +200,7 @@ class InstallationHandler {
                 installation.getId()
             ),
             appInstallation.getId(),
-            AppInstallationHandler.APPLICATION_SLUG,
+            appInstallation.getSlug(),
             organization.id(),
             ActorType.ORGANIZATION,
             appInstallation.getDefaultPermissions(),

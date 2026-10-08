@@ -194,7 +194,8 @@ class InstallationPageController {
         List.of(),
         Map.of(),
         new HashSet<>(),
-        giteaUserId
+        giteaUserId,
+        null
     );
     installation.setWebhookSecret(resolvedWebhookSecret);
     installationManager.setAppInstallation(installation);
