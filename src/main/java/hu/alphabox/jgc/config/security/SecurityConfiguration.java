@@ -71,6 +71,10 @@ class SecurityConfiguration {
             requestMatcherBuilder.matcher("/api/v3/rate_limit"),
             requestMatcherBuilder.matcher("/application-error"),
             requestMatcherBuilder.matcher("/{organization}/{repository}/tree/{branch}"),
+            requestMatcherBuilder.matcher(HttpMethod.GET, "/{organization}/{repository}/commit/{sha}"),
+            requestMatcherBuilder.matcher(HttpMethod.GET, "/{organization}/{repository}/compare/**"),
+            requestMatcherBuilder.matcher(HttpMethod.GET, "/{organization}/{repository}/blob/**"),
+            requestMatcherBuilder.matcher(HttpMethod.GET, "/{organization}/{repository}/pull/{number}"),
             EndpointRequest.toAnyEndpoint()
         ))
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
