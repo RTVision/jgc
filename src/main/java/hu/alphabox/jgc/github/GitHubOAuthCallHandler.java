@@ -6,6 +6,7 @@ import hu.alphabox.jgc.github.app.GitHubAppInstallationMissingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,9 +62,23 @@ class GitHubOAuthCallHandler {
 
   }
 
-  @PostMapping("/login/oauth/access_token")
+  @PostMapping(path = "/login/oauth/access_token", consumes = MediaType.APPLICATION_JSON_VALUE)
   OAuth2AccessTokenResponse handleOAuth2AccessToken(@RequestBody OAuth2AccessTokenRequest request) {
-    String token = tokenService.generateToken(request.clientId, request.clientSecret, request.code);
+    return issueAccessToken(request.clientId, request.clientSecret, request.code);
+  }
+
+  // GitHub also accepts a form-encoded token exchange; OAuth clients such as Sentry's send one
+  @PostMapping(path = "/login/oauth/access_token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+  OAuth2AccessTokenResponse handleFormOAuth2AccessToken(
+      @RequestParam(name = "client_id") String clientId,
+      @RequestParam(name = "client_secret") String clientSecret,
+      @RequestParam String code
+  ) {
+    return issueAccessToken(clientId, clientSecret, code);
+  }
+
+  private OAuth2AccessTokenResponse issueAccessToken(String clientId, String clientSecret, String code) {
+    String token = tokenService.generateToken(clientId, clientSecret, code);
     return new OAuth2AccessTokenResponse(
         token,
         "",
