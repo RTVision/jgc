@@ -50,6 +50,11 @@ interface GitHubRefMapper {
   DiffEntry.Status diffEntryStatus(String status);
 
   default List<DiffEntry> diffEntryList(Commit commit) {
+    // commits listed without files=true (list-commits, compare) carry no affected-file list
+    if (commit.files() == null) {
+      return Collections.emptyList();
+    }
+
     URI baseCommitUrl = URI.create(commit.htmlUrl());
     String[] pathSegments = baseCommitUrl.getPath().split("/");
 

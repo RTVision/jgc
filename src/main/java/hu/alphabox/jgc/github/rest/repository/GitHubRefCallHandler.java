@@ -133,6 +133,36 @@ class GitHubRefCallHandler {
     }
   }
 
+  // GitHub's list-commits endpoint; Sentry calls it to check it can read a repository it is adding
+  @GetMapping("/commits")
+  ResponseEntity<List<GitHubCommitResponse>> handleListCommits(
+      @PathVariable String owner,
+      @PathVariable String repo,
+      @RequestParam(required = false) String sha,
+      @RequestParam(required = false) String path,
+      @RequestParam(defaultValue = "1") int page,
+      @RequestParam(name = "per_page", defaultValue = "30") int perPage
+  ) {
+    if (!allowedRepositoryService.isAllowed(owner, repo)) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      log.info("Listing commits of {}/{} (sha: {}, path: {}, page: {})", owner, repo, sha, path, page);
+      ResponseEntity<List<Commit>> response = giteaClient.repoGetAllCommits(
+          owner, repo, sha, path, false, false, false, Math.max(page, 1), Math.clamp(perPage, 1, 100), null
+      );
+      List<Commit> commits = response.getBody();
+      return ResponseEntity.ok(commits == null ? List.of() : mapper.commits(commits));
+    } catch (HttpClientErrorException.NotFound _) {
+      log.info("Repository {}/{} not found in Gitea while listing commits", owner, repo);
+      return ResponseEntity.notFound().build();
+    } catch (HttpClientErrorException.Conflict _) {
+      // Gitea answers 409 for an empty repository; GitHub returns 409 "Git Repository is empty." too
+      return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    }
+  }
+
   @GetMapping("/commits/**")
   ResponseEntity<GitHubCommitResponse> handleCommit(
       HttpServletRequest request,

@@ -105,6 +105,44 @@ class GitHubRefCallHandlerTest {
   }
 
   @Test
+  void shouldListCommitsWithoutFallingIntoSingleCommitHandler() {
+    Mockito.when(allowedRepositoryService.isAllowed("TestOrg", "TestRepo")).thenReturn(true);
+    hu.alphabox.jgc.gitea.client.model.Commit listed = commit("abc123");
+    // Gitea omits the affected-file list when commits are listed with files=false
+    listed = new hu.alphabox.jgc.gitea.client.model.Commit(
+        listed.author(), listed.commit(), listed.committer(), listed.created(), null,
+        listed.htmlUrl(), listed.parents(), listed.sha(), listed.stats(), listed.url()
+    );
+    Mockito.when(giteaClient.repoGetAllCommits(
+            Mockito.eq("TestOrg"), Mockito.eq("TestRepo"), Mockito.isNull(), Mockito.isNull(),
+            Mockito.eq(false), Mockito.eq(false), Mockito.eq(false), Mockito.eq(1), Mockito.eq(1), Mockito.isNull()))
+        .thenReturn(ResponseEntity.ok(List.of(listed)));
+
+    var result = client.get()
+        .uri("/api/v3/repos/TestOrg/TestRepo/commits?per_page=1")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(token()))
+        .exchangeSuccessfully()
+        .returnResult(GitHubCommitResponse[].class)
+        .getResponseBody();
+
+    Assertions.assertThat(result).hasSize(1);
+    Assertions.assertThat(result[0].sha()).isEqualTo("abc123");
+    Assertions.assertThat(result[0].files()).isEmpty();
+    Mockito.verify(giteaClient, Mockito.never()).repoGetSingleCommit(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+  }
+
+  @Test
+  void shouldNotListCommitsOfDisallowedRepository() {
+    Mockito.when(allowedRepositoryService.isAllowed("TestOrg", "TestRepo")).thenReturn(false);
+
+    client.get()
+        .uri("/api/v3/repos/TestOrg/TestRepo/commits")
+        .header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(token()))
+        .exchange()
+        .expectStatus().isNotFound();
+  }
+
+  @Test
   void shouldCompareCommits() throws URISyntaxException {
     Mockito.when(allowedRepositoryService.isAllowed("TestOrg", "TestRepo")).thenReturn(true);
     Mockito.when(giteaClient.repoCompare(Mockito.eq("TestOrg"), Mockito.eq("TestRepo"), Mockito.eq("main...feature")))
