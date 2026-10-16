@@ -14,6 +14,7 @@ import hu.alphabox.jgc.github.app.GitHubAppInstallation.Installation;
 import hu.alphabox.jgc.github.app.GitHubAppInstallationManager;
 import java.time.Instant;
 import java.util.Date;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
@@ -52,6 +53,24 @@ class GitHubAppJwtDecoderNumericIssuerTest {
         .exchange()
         .expectStatus().isCreated()
         .expectHeader().valueEquals("X-GitHub-Enterprise-Version", "3.17.6");
+  }
+
+  /**
+   * GitHub returns expires_at in whole seconds, and Sentry parses it with a fraction-less
+   * format, so a nanosecond timestamp broke its repository calls.
+   */
+  @Test
+  void shouldReturnExpiresAtInWholeSeconds() throws JOSEException {
+    GitHubAppInstallation appInstallation = installationManager.getAppInstallation().orElseThrow();
+    Installation installation = appInstallation.getInstallations().iterator().next();
+
+    client.post()
+        .uri("/api/v3/app/installations/{installation-id}/access_tokens", installation.getId())
+        .header(HttpHeaders.AUTHORIZATION, "Bearer %s".formatted(jwtWithIssuer(appInstallation, appInstallation.getId())))
+        .exchange()
+        .expectStatus().isCreated()
+        .expectBody().jsonPath("$.expires_at").value(String.class,
+            expiresAt -> Assertions.assertThat(expiresAt).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z"));
   }
 
   @Test

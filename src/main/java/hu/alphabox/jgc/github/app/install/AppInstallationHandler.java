@@ -15,6 +15,7 @@ import java.security.KeyPair;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -216,7 +217,8 @@ class AppInstallationHandler {
         .contentType(MediaType.APPLICATION_JSON)
         .body(new AccessTokenResponse(
             opaqueToken.token(),
-            opaqueToken.expiresAt(),
+            // GitHub sends whole seconds; Sentry parses expires_at with a fraction-less format
+            opaqueToken.expiresAt().truncatedTo(ChronoUnit.SECONDS),
             permissions,
             repositorySelection
         ));
