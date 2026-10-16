@@ -216,7 +216,7 @@ class InstallationHandler {
     );
   }
 
-  @GetMapping(value = "/api/v3/user", produces = "application/vnd.github.v3+json")
+  @GetMapping("/api/v3/user")
   ResponseEntity<UserResponse> handleUser() {
     ResponseEntity<User> response = giteaClient.userGetCurrent();
     User giteaUser = response.getBody();
@@ -230,7 +230,7 @@ class InstallationHandler {
     ));
   }
 
-  @GetMapping(value = "/api/v3/user/installations", produces = "application/vnd.github.v3+json")
+  @GetMapping("/api/v3/user/installations")
   ResponseEntity<UserInstallationsResponse> handleInstallations() {
     Optional<GitHubAppInstallation> optionalAppInstallation = installationManager.getAppInstallation();
 

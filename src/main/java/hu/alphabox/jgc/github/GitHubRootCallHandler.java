@@ -20,7 +20,7 @@ import tools.jackson.databind.annotation.JsonNaming;
 @EnableConfigurationProperties(ApplicationProperties.class)
 class GitHubRootCallHandler {
 
-  @GetMapping(produces = "application/vnd.github.v3+json")
+  @GetMapping
   ResponseEntity<String> handleMetaRoot() {
     return ResponseEntity.ok().build();
   }
